@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Infinite Audio Archive"
+version = "1.0.0"
+id = "artifacts/infinite-audio"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21653
+
+[services.development]
+run = "pnpm --filter @workspace/infinite-audio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/infinite-audio", "run", "build" ]
+publicDir = "artifacts/infinite-audio/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21653"
+BASE_PATH = "/"

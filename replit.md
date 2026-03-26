@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── infinite-audio/     # Infinite Audio Archive landing page (React + Vite)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -34,6 +35,23 @@ artifacts-monorepo/
 ├── tsconfig.json           # Root TS project references
 └── package.json            # Root package with hoisted devDeps
 ```
+
+## Artifacts
+
+### `artifacts/infinite-audio` — Infinite Audio Archive
+
+A premium Khmer Smoke music licensing landing page with:
+- Fixed navigation with logo and links
+- Hero section with animated "Powered by Astra AI" badge, gradient headline, CTA buttons, and stats
+- Featured Tracks section (3 tracks) with play/pause toggle, genre, price, and license button
+- Use Cases section (YouTube, Podcasts, Social Media, Film)
+- Pricing section (Free / Commercial / Enterprise tiers) + Standard Bundle offer
+- Testimonials section (3 creator reviews)
+- Final CTA section
+- Footer with links and system status indicator
+
+Tech: React 18, Vite, TypeScript, CSS custom properties (no Tailwind dependency in this artifact)
+Preview path: `/`
 
 ## TypeScript & Composite Projects
 
