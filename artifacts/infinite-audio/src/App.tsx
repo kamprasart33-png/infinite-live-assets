@@ -100,9 +100,28 @@ function ChevronRight({ size = 16 }: { size?: number }) {
   );
 }
 
+const publicLinks = [
+  { label: "Library", href: "#tracks" },
+  { label: "Licensing", href: "#pricing" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Enterprise", href: "#contact" },
+  { label: "Developers", href: "#contact" },
+  { label: "About", href: "#about" },
+];
+
+const signedInLinks = [
+  { label: "Library", href: "#tracks" },
+  { label: "Sales", href: "#dashboard" },
+  { label: "Licensing", href: "#pricing" },
+  { label: "Analytics", href: "#dashboard" },
+  { label: "Astra", href: "#dashboard", highlight: true },
+];
+
 export default function App() {
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [avatarHover, setAvatarHover] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -114,6 +133,8 @@ export default function App() {
     setPlayingId(prev => (prev === id ? null : id));
   };
 
+  const links = isSignedIn ? signedInLinks : publicLinks;
+
   return (
     <div style={{ backgroundColor: "#000", color: "#fff", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
       {/* Google Font */}
@@ -122,40 +143,140 @@ export default function App() {
       {/* Navigation */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: scrolled ? "rgba(0,0,0,0.95)" : "rgba(0,0,0,0.8)",
+        background: scrolled ? "rgba(0,0,0,0.97)" : "rgba(0,0,0,0.8)",
         backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(6,182,212,0.2)",
-        padding: "1rem 2rem",
-        transition: "background 0.3s"
+        borderBottom: scrolled ? "1px solid rgba(6,182,212,0.25)" : "1px solid rgba(6,182,212,0.12)",
+        padding: "0.85rem 2rem",
+        transition: "all 0.3s"
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: "50%",
+              width: 38, height: 38, borderRadius: "50%",
               background: "linear-gradient(135deg, var(--cyan-400), var(--purple-500))",
               display: "flex", alignItems: "center", justifyContent: "center", color: "#fff"
             }}>
               <MusicIcon />
             </div>
-            <span style={{ fontSize: "1.125rem", fontWeight: 700, letterSpacing: "-0.025em" }}>
+            <span style={{ fontSize: "1rem", fontWeight: 700, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
               INFINITE AUDIO ARCHIVE
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-            <NavLink href="#tracks">Music Library</NavLink>
-            <NavLink href="#pricing">Licensing</NavLink>
-            <NavLink href="#about">About</NavLink>
-            <a href="#contact" style={{
-              background: "var(--cyan-500)", color: "#000",
-              padding: "0.5rem 1rem", borderRadius: 9999,
-              fontWeight: 600, textDecoration: "none",
-              transition: "background 0.2s"
-            }}
-              onMouseEnter={e => (e.currentTarget.style.background = "var(--cyan-400)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "var(--cyan-500)")}
-            >
-              Get Started
-            </a>
+
+          {/* Nav links */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            {links.map(link => (
+              link.highlight ? (
+                <a key={link.label} href={link.href} style={{
+                  display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                  background: "linear-gradient(135deg, rgba(6,182,212,0.15), rgba(168,85,247,0.15))",
+                  border: "1px solid rgba(6,182,212,0.35)",
+                  color: "var(--cyan-400)", padding: "0.35rem 0.85rem",
+                  borderRadius: 9999, fontSize: "0.875rem", fontWeight: 600,
+                  textDecoration: "none", transition: "all 0.2s",
+                  letterSpacing: "0.01em"
+                }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(6,182,212,0.25), rgba(168,85,247,0.25))";
+                    e.currentTarget.style.borderColor = "rgba(6,182,212,0.6)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(6,182,212,0.15), rgba(168,85,247,0.15))";
+                    e.currentTarget.style.borderColor = "rgba(6,182,212,0.35)";
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--cyan-400)", display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
+                  {link.label}
+                </a>
+              ) : (
+                <NavLink key={link.label} href={link.href}>{link.label}</NavLink>
+              )
+            ))}
+          </div>
+
+          {/* Right side: CTA or User Avatar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+            {isSignedIn ? (
+              <>
+                {/* Notification dot */}
+                <div style={{ position: "relative" }}>
+                  <button style={{
+                    background: "transparent", border: "none", cursor: "pointer",
+                    color: "#9ca3af", padding: "0.4rem", borderRadius: 8,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "color 0.2s"
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+                    title="Notifications"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </button>
+                  <span style={{
+                    position: "absolute", top: 4, right: 4,
+                    width: 7, height: 7, borderRadius: "50%",
+                    background: "var(--cyan-400)", border: "1.5px solid #000"
+                  }} />
+                </div>
+                {/* Avatar */}
+                <button
+                  onClick={() => setIsSignedIn(false)}
+                  onMouseEnter={() => setAvatarHover(true)}
+                  onMouseLeave={() => setAvatarHover(false)}
+                  title="Sign out"
+                  style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+                    border: avatarHover ? "2px solid var(--cyan-400)" : "2px solid rgba(6,182,212,0.4)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", fontWeight: 700, fontSize: "0.8rem",
+                    color: "#fff", transition: "border-color 0.2s",
+                    position: "relative"
+                  }}
+                >
+                  {avatarHover ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  ) : "KS"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setIsSignedIn(true)} style={{
+                  background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
+                  color: "#d1d5db", padding: "0.45rem 1rem", borderRadius: 9999,
+                  fontWeight: 500, cursor: "pointer", fontSize: "0.875rem",
+                  transition: "all 0.2s"
+                }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
+                    e.currentTarget.style.color = "#fff";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                    e.currentTarget.style.color = "#d1d5db";
+                  }}
+                >
+                  Sign In
+                </button>
+                <a href="#contact" style={{
+                  background: "var(--cyan-500)", color: "#000",
+                  padding: "0.45rem 1.1rem", borderRadius: 9999,
+                  fontWeight: 600, textDecoration: "none",
+                  transition: "background 0.2s", fontSize: "0.875rem",
+                  whiteSpace: "nowrap"
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--cyan-400)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "var(--cyan-500)")}
+                >
+                  Get Started
+                </a>
+              </>
+            )}
           </div>
         </div>
       </nav>
