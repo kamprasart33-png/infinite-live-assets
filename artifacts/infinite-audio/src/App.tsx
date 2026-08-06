@@ -199,13 +199,13 @@ export default function App() {
           </div>
 
           <h1 style={{ fontSize: "4rem", fontWeight: 800, marginBottom: "1.5rem", lineHeight: 1.1 }}>
-            <span>CINEMATIC </span>
+            <span>The AI Operating System for </span>
             <span style={{
               background: "linear-gradient(135deg, var(--cyan-400), var(--purple-500))",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text"
-            }}>INTELLIGENCE</span>
+            }}>Music Licensing</span>
           </h1>
 
           <p style={{ fontSize: "1.25rem", color: "#9ca3af", maxWidth: "42rem", margin: "0 auto 2.5rem" }}>
