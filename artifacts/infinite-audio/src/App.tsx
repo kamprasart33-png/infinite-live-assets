@@ -648,6 +648,83 @@ export default function App() {
         </div>
       </section>
 
+      {/* Feature Pillars */}
+      <section style={{ padding: "3rem 2rem" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem" }}>
+          {[
+            {
+              label: "A Growing Library",
+              desc: "New tracks added weekly, curated for creators who demand more.",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              ),
+              accent: "var(--cyan-400)",
+            },
+            {
+              label: "Royalty-Free",
+              desc: "License once, use forever. No claims, no takedowns, ever.",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              ),
+              accent: "#22c55e",
+            },
+            {
+              label: "Secure Licensing",
+              desc: "Every purchase generates a legally binding license PDF instantly.",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              ),
+              accent: "var(--purple-500)",
+            },
+            {
+              label: "Instant Delivery",
+              desc: "High-quality audio and your license in your inbox in seconds.",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              ),
+              accent: "#f59e0b",
+            },
+          ].map(({ label, desc, icon, accent }) => (
+            <div key={label} style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 16, padding: "1.75rem 1.5rem",
+              transition: "border-color 0.25s, transform 0.25s",
+              cursor: "default"
+            }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = `${accent}55`;
+                (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)";
+                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+              }}
+            >
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, marginBottom: "1.1rem",
+                background: `${accent}18`,
+                border: `1px solid ${accent}33`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: accent
+              }}>
+                {icon}
+              </div>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.45rem" }}>{label}</h3>
+              <p style={{ fontSize: "0.82rem", color: "#6b7280", lineHeight: 1.6 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Featured Tracks */}
       <section id="tracks" style={{ padding: "5rem 2rem" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto 3rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
