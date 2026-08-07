@@ -845,6 +845,143 @@ export default function App() {
         </div>
       </section>
 
+      {/* Meet Astra */}
+      <section style={{
+        padding: "5rem 2rem",
+        background: "linear-gradient(180deg, transparent, rgba(6,182,212,0.04), rgba(168,85,247,0.04), transparent)"
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5rem", alignItems: "center" }}>
+
+          {/* Left — copy */}
+          <div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.3)",
+              borderRadius: 9999, padding: "0.35rem 1rem", marginBottom: "1.5rem"
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width={13} height={13} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--purple-500)" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--purple-500)", textTransform: "uppercase" }}>Powered by AI</span>
+            </div>
+
+            <h2 style={{ fontSize: "2.75rem", fontWeight: 800, lineHeight: 1.1, marginBottom: "1rem" }}>
+              Meet{" "}
+              <span style={{
+                background: "linear-gradient(135deg, var(--cyan-400), var(--purple-500))",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text"
+              }}>Astra</span>
+            </h2>
+            <p style={{ color: "#9ca3af", fontSize: "1.05rem", lineHeight: 1.7, marginBottom: "2.5rem", maxWidth: "38ch" }}>
+              Astra's AI engine analyzes every track in real time — surfacing revenue opportunities, flagging risks, and helping you make smarter licensing decisions before your competitors do.
+            </p>
+
+            {/* Checklist */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+              {[
+                { label: "Commercial potential", desc: "Scores each track's likelihood to convert in paid campaigns." },
+                { label: "Film compatibility", desc: "Matches sonic profiles to genre, tempo, and scene mood." },
+                { label: "Revenue forecasts", desc: "Projects 30-day earnings based on catalog trends." },
+                { label: "Copyright monitoring", desc: "Detects unauthorized use across major platforms 24/7." },
+                { label: "Pricing recommendations", desc: "Dynamic pricing suggestions based on demand signals." },
+                { label: "Customer insights", desc: "Understands who's licensing and why, so you sell smarter." },
+              ].map(({ label, desc }) => (
+                <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2,
+                    background: "linear-gradient(135deg, rgba(6,182,212,0.25), rgba(168,85,247,0.2))",
+                    border: "1px solid rgba(6,182,212,0.4)",
+                    display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--cyan-400)" }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{label}</span>
+                    <span style={{ color: "#6b7280", fontSize: "0.85rem" }}> — {desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <a href="#contact" style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              marginTop: "2.5rem",
+              background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+              color: "#fff", fontWeight: 700, fontSize: "0.9rem",
+              padding: "0.85rem 1.75rem", borderRadius: 9999,
+              textDecoration: "none", transition: "opacity 0.2s"
+            }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+            >
+              Activate Astra
+              <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </a>
+          </div>
+
+          {/* Right — visual orb / AI card */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <div style={{ position: "relative", width: 360, height: 360 }}>
+              {/* Outer glow ring */}
+              <div style={{
+                position: "absolute", inset: 0, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(6,182,212,0.12) 0%, rgba(168,85,247,0.08) 50%, transparent 70%)",
+                animation: "float 5s ease-in-out infinite"
+              }} />
+              {/* Middle ring */}
+              <div style={{
+                position: "absolute", inset: 40, borderRadius: "50%",
+                border: "1px solid rgba(6,182,212,0.2)",
+                animation: "float 4s ease-in-out infinite reverse"
+              }} />
+              {/* Inner ring */}
+              <div style={{
+                position: "absolute", inset: 80, borderRadius: "50%",
+                border: "1px solid rgba(168,85,247,0.25)",
+                animation: "float 3s ease-in-out infinite"
+              }} />
+              {/* Core orb */}
+              <div style={{
+                position: "absolute", inset: 110, borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 0 60px rgba(6,182,212,0.4), 0 0 120px rgba(168,85,247,0.2)",
+                animation: "glow 2.5s ease-in-out infinite"
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width={52} height={52} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#fff" }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+
+              {/* Floating stat chips */}
+              {[
+                { label: "Opp. Score", value: "94%", top: "8%", left: "-12%", color: "var(--cyan-400)" },
+                { label: "Revenue ↑", value: "+18%", top: "8%", right: "-12%", color: "#22c55e" },
+                { label: "Tracks", value: "26+", bottom: "8%", left: "-8%", color: "var(--purple-500)" },
+                { label: "Claims", value: "0", bottom: "8%", right: "-8%", color: "var(--cyan-400)" },
+              ].map(({ label, value, color, ...pos }) => (
+                <div key={label} style={{
+                  position: "absolute", ...pos,
+                  background: "rgba(6,8,15,0.92)",
+                  border: "1px solid rgba(6,182,212,0.25)",
+                  borderRadius: 12, padding: "0.5rem 0.85rem",
+                  backdropFilter: "blur(12px)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+                  animation: "float 4s ease-in-out infinite"
+                }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+                  <div style={{ fontSize: "0.65rem", color: "#6b7280", marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ASTRA LIVE — CEO Dashboard Preview */}
       <section style={{ padding: "5rem 2rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
