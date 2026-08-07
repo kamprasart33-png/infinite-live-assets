@@ -117,6 +117,200 @@ const signedInLinks = [
   { label: "Astra", href: "#dashboard", highlight: true },
 ];
 
+function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [showCursor, setShowCursor] = useState(true);
+
+  const greeting = isSignedIn ? "Good morning, Prasart." : "Hello. I'm Astra.";
+  const line1 = isSignedIn ? "Today's revenue increased 18%." : "Your AI music licensing co-pilot.";
+  const line2 = isSignedIn
+    ? "Your top opportunity is Khmer Smoke – My Side."
+    : "Sign in to unlock your dashboard.";
+
+  // Pulse in after mount
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Typewriter when opened
+  useEffect(() => {
+    if (!open) { setTyped(""); return; }
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setTyped(greeting.slice(0, i));
+      if (i >= greeting.length) clearInterval(interval);
+    }, 38);
+    return () => clearInterval(interval);
+  }, [open, greeting]);
+
+  // Blinking cursor
+  useEffect(() => {
+    const t = setInterval(() => setShowCursor(c => !c), 530);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <>
+      {/* Panel */}
+      <div style={{
+        position: "fixed", bottom: open ? 96 : -400, right: 24, zIndex: 200,
+        width: 320,
+        background: "rgba(6,8,15,0.97)",
+        border: "1px solid rgba(6,182,212,0.35)",
+        borderRadius: 20,
+        boxShadow: "0 0 60px rgba(6,182,212,0.18), 0 24px 60px rgba(0,0,0,0.7)",
+        transition: "bottom 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+        overflow: "hidden",
+        backdropFilter: "blur(24px)"
+      }}>
+        {/* Header */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(6,182,212,0.18), rgba(168,85,247,0.12))",
+          borderBottom: "1px solid rgba(6,182,212,0.2)",
+          padding: "1rem 1.25rem",
+          display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            {/* Orb */}
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%",
+              background: "linear-gradient(135deg, var(--cyan-400), var(--purple-500))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 0 16px rgba(6,182,212,0.5)",
+              animation: "glow 2s ease-in-out infinite"
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--cyan-400)" }}>ASTRA</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <span style={{ fontSize: "0.68rem", color: "#6b7280" }}>AI · Online</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={() => setOpen(false)} style={{
+            background: "transparent", border: "none", cursor: "pointer",
+            color: "#6b7280", padding: 4, borderRadius: 6, lineHeight: 1,
+            transition: "color 0.2s"
+          }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "1.25rem" }}>
+          {/* Typing greeting */}
+          <div style={{
+            background: "rgba(6,182,212,0.07)",
+            border: "1px solid rgba(6,182,212,0.15)",
+            borderRadius: 12,
+            padding: "1rem",
+            marginBottom: "0.9rem",
+            minHeight: 56
+          }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#e5e7eb", marginBottom: "0.5rem", minHeight: "1.4em" }}>
+              {typed}{typed.length < greeting.length || showCursor ? <span style={{ color: "var(--cyan-400)", animation: "none" }}>|</span> : null}
+            </p>
+            {typed.length >= greeting.length && (
+              <div style={{ animation: "fadeIn 0.4s ease" }}>
+                <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginBottom: "0.35rem" }}>{line1}</p>
+                <p style={{ fontSize: "0.82rem", color: "#9ca3af" }}>{line2}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Stats row (signed in only) */}
+          {isSignedIn && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.9rem", animation: "fadeIn 0.6s ease" }}>
+              {[
+                { label: "Revenue Today", value: "$2,430", up: true },
+                { label: "Opp. Score", value: "94%", up: true },
+              ].map(stat => (
+                <div key={stat.label} style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 10, padding: "0.65rem 0.75rem"
+                }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--cyan-400)" }}>{stat.value}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* CTA */}
+          <a href="#dashboard" style={{
+            display: "block", textAlign: "center",
+            background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+            color: "#fff", fontWeight: 700, fontSize: "0.85rem",
+            padding: "0.7rem", borderRadius: 10,
+            textDecoration: "none", transition: "opacity 0.2s",
+            letterSpacing: "0.02em"
+          }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+            onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+          >
+            {isSignedIn ? "Open Dashboard" : "Sign In to Get Started"}
+          </a>
+
+          <p style={{ fontSize: "0.68rem", color: "#374151", textAlign: "center", marginTop: "0.6rem" }}>
+            Powered by Astra AI · Always on
+          </p>
+        </div>
+      </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 201,
+          width: 56, height: 56, borderRadius: "50%",
+          background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+          border: "none", cursor: "pointer", color: "#fff",
+          boxShadow: open
+            ? "0 0 0 4px rgba(6,182,212,0.25), 0 8px 32px rgba(6,182,212,0.4)"
+            : "0 0 0 2px rgba(6,182,212,0.15), 0 8px 24px rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transform: visible ? "scale(1)" : "scale(0)",
+          transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s",
+          animation: visible && !open ? "glow 2.5s ease-in-out infinite" : "none"
+        }}
+        title="Open Astra"
+      >
+        {open ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width={22} height={22} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width={22} height={22} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        )}
+        {/* Ping ring */}
+        {!open && visible && (
+          <span style={{
+            position: "absolute", inset: -4, borderRadius: "50%",
+            border: "2px solid rgba(6,182,212,0.5)",
+            animation: "ping 2s ease-in-out infinite"
+          }} />
+        )}
+      </button>
+    </>
+  );
+}
+
 export default function App() {
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -815,6 +1009,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Astra Widget */}
+      <AstraWidget isSignedIn={isSignedIn} />
     </div>
   );
 }
