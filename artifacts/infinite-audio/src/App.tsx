@@ -731,6 +731,120 @@ export default function App() {
         </div>
       </section>
 
+      {/* Licensing Process */}
+      <section style={{ padding: "5rem 2rem" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.14em", color: "var(--cyan-400)", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+            How It Works
+          </p>
+          <h2 style={{ fontSize: "2.25rem", fontWeight: 700, marginBottom: "1rem" }}>
+            Explain the Licensing Process
+          </h2>
+          <p style={{ color: "#9ca3af", maxWidth: "36rem", margin: "0 auto 4rem" }}>
+            From discovery to download — get the perfect track licensed in under two minutes.
+          </p>
+
+          {/* Steps */}
+          <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 0 }}>
+            {[
+              {
+                step: "01",
+                label: "Choose Track",
+                desc: "Browse our curated archive of cinematic, lo-fi, and ambient tracks built for creators.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={26} height={26} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                ),
+              },
+              {
+                step: "02",
+                label: "Select License",
+                desc: "Pick the license that matches your project — YouTube, Podcast, Commercial, or Enterprise.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={26} height={26} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                ),
+              },
+              {
+                step: "03",
+                label: "Pay Securely",
+                desc: "Checkout in seconds with card or PayPal. Your payment is fully encrypted and protected.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={26} height={26} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                ),
+              },
+              {
+                step: "04",
+                label: "Instant Download",
+                desc: "Your license PDF and high-quality audio file are delivered instantly to your inbox.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={26} height={26} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                ),
+              },
+            ].map((s, i, arr) => (
+              <div key={s.step} style={{ display: "flex", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+                {/* Step card */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0.5rem" }}>
+                  {/* Icon circle */}
+                  <div style={{
+                    width: 64, height: 64, borderRadius: "50%",
+                    background: "linear-gradient(135deg, rgba(6,182,212,0.18), rgba(168,85,247,0.12))",
+                    border: "1px solid rgba(6,182,212,0.3)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "var(--cyan-400)", marginBottom: "1.25rem", flexShrink: 0,
+                    boxShadow: "0 0 24px rgba(6,182,212,0.12)"
+                  }}>
+                    {s.icon}
+                  </div>
+                  {/* Step number */}
+                  <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--cyan-400)", marginBottom: "0.35rem", opacity: 0.7 }}>
+                    STEP {s.step}
+                  </div>
+                  <h3 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.5rem" }}>{s.label}</h3>
+                  <p style={{ fontSize: "0.82rem", color: "#6b7280", lineHeight: 1.6, maxWidth: 180 }}>{s.desc}</p>
+                </div>
+
+                {/* Arrow between steps */}
+                {i < arr.length - 1 && (
+                  <div style={{
+                    display: "flex", alignItems: "center", paddingTop: 20, flexShrink: 0, color: "rgba(6,182,212,0.35)"
+                  }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width={28} height={28} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom CTA */}
+          <div style={{ marginTop: "3.5rem" }}>
+            <a href="#tracks" style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              background: "var(--cyan-500)", color: "#000",
+              padding: "0.85rem 2rem", borderRadius: 9999,
+              fontWeight: 700, textDecoration: "none", fontSize: "0.9rem",
+              transition: "background 0.2s"
+            }}
+              onMouseEnter={e => (e.currentTarget.style.background = "var(--cyan-400)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "var(--cyan-500)")}
+            >
+              Browse the Library
+              <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ASTRA LIVE — CEO Dashboard Preview */}
       <section style={{ padding: "5rem 2rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
