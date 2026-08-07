@@ -1059,6 +1059,186 @@ export default function App() {
         </div>
       </section>
 
+      {/* Run Your Music Business with Astra */}
+      <section style={{
+        padding: "5rem 2rem",
+        background: "linear-gradient(180deg, transparent, rgba(168,85,247,0.05), rgba(6,182,212,0.03), transparent)"
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.25)",
+              borderRadius: 9999, padding: "0.35rem 1rem", marginBottom: "1.25rem"
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--cyan-400)" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--cyan-400)", textTransform: "uppercase" }}>Full Business Suite</span>
+            </div>
+            <h2 style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1.15, marginBottom: "1rem" }}>
+              Run Your Music Business{" "}
+              <span style={{
+                background: "linear-gradient(135deg, var(--cyan-400), var(--purple-500))",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text"
+              }}>with Astra</span>
+            </h2>
+            <p style={{ color: "#9ca3af", maxWidth: "40ch", margin: "0 auto", fontSize: "1rem", lineHeight: 1.7 }}>
+              Every tool you need to grow, protect, and monetize your music catalog — in one AI-powered platform.
+            </p>
+          </div>
+
+          {/* Feature grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+            {[
+              {
+                label: "Track Revenue",
+                desc: "Real-time earnings across every license type and platform.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                accent: "#22c55e",
+              },
+              {
+                label: "Customer CRM",
+                desc: "Know who's buying, what they license, and when to re-engage.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                ),
+                accent: "var(--cyan-400)",
+              },
+              {
+                label: "AI Licensing",
+                desc: "Astra matches tracks to buyers and auto-recommends license tiers.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
+                accent: "var(--purple-500)",
+              },
+              {
+                label: "Royalty Management",
+                desc: "Automated royalty splits, statements, and payout scheduling.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                  </svg>
+                ),
+                accent: "#f59e0b",
+              },
+              {
+                label: "Sales Analytics",
+                desc: "Conversion funnels, revenue trends, and top-performing tracks.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ),
+                accent: "var(--cyan-400)",
+              },
+              {
+                label: "Copyright Protection",
+                desc: "24/7 monitoring across YouTube, TikTok, Instagram, and more.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                ),
+                accent: "#22c55e",
+              },
+              {
+                label: "Marketing Automation",
+                desc: "Auto-generate campaigns when a track hits a revenue milestone.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                ),
+                accent: "var(--purple-500)",
+              },
+              {
+                label: "Business Intelligence",
+                desc: "Executive reports, forecasts, and market positioning — powered by AI.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                ),
+                accent: "#f59e0b",
+              },
+            ].map(({ label, desc, icon, accent }) => (
+              <div key={label} style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 16, padding: "1.5rem",
+                display: "flex", flexDirection: "column", gap: "0.75rem",
+                transition: "border-color 0.25s, transform 0.25s",
+                cursor: "default"
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = `${accent}44`;
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  {/* Check + icon */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: `${accent}18`, border: `1px solid ${accent}33`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: accent
+                  }}>
+                    {icon}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: accent, flexShrink: 0 }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{label}</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.6, paddingLeft: "0.1rem" }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom CTA row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginTop: "3rem", flexWrap: "wrap" }}>
+            <a href="#contact" style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
+              color: "#fff", fontWeight: 700, fontSize: "0.9rem",
+              padding: "0.85rem 2rem", borderRadius: 9999,
+              textDecoration: "none", transition: "opacity 0.2s"
+            }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+            >
+              Start Free — No Credit Card
+            </a>
+            <a href="#pricing" style={{
+              color: "#9ca3af", fontWeight: 500, fontSize: "0.875rem",
+              textDecoration: "none", transition: "color 0.2s"
+            }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+            >
+              View pricing →
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ASTRA LIVE — CEO Dashboard Preview */}
       <section style={{ padding: "5rem 2rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
