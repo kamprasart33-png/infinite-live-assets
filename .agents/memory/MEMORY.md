@@ -1,0 +1,1 @@
+- [Sprint 2 API architecture](sprint2-api.md) — Express routes at /api, Vite proxies /api → localhost:8080; schema in lib/db, services in api-server/src/services
