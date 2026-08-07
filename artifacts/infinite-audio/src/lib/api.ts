@@ -49,6 +49,7 @@ export interface Track {
   duration: string | null;
   priceCents: number;
   plays: number;
+  fileUrl: string | null;
   createdAt: string;
 }
 
@@ -96,6 +97,37 @@ export interface AstraResult {
   data: unknown;
 }
 
+// ── Store / Checkout types ────────────────────────────────────────────────
+
+export interface LicensePrice {
+  product_id: string;
+  product_name: string;
+  product_description: string | null;
+  product_metadata: { license_type: string } | null;
+  price_id: string;
+  unit_amount: number;
+  currency: string;
+}
+
+export interface Order {
+  id: number;
+  stripeSessionId: string;
+  stripePaymentIntentId: string | null;
+  trackId: number | null;
+  trackTitle: string | null;
+  licenseType: string;
+  customerName: string;
+  customerEmail: string;
+  amountCents: number;
+  status: string;
+  invoiceNumber: string | null;
+  createdAt: string;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
+}
+
 // ── API calls ─────────────────────────────────────────────────────────────
 
 export const api = {
@@ -121,13 +153,32 @@ export const api = {
   astra: {
     command: (command: string) => post<AstraResult>("/astra/command", { command }),
   },
+  store: {
+    tracks: () => get<Track[]>("/store/tracks"),
+    licensePrices: () => get<LicensePrice[]>("/store/license-prices"),
+  },
+  checkout: {
+    createSession: (params: {
+      trackId: number;
+      trackTitle: string;
+      licenseType: string;
+      priceId: string;
+      customerName: string;
+      customerEmail: string;
+    }) => post<CheckoutSessionResponse>("/checkout/create-session", params),
+    getSession: (sessionId: string) =>
+      get<Order>(`/checkout/session/${sessionId}`),
+  },
 };
 
 // ── Formatting helpers ────────────────────────────────────────────────────
 
 export function centsToDisplay(cents: number): string {
   if (cents >= 100_000) return `$${(cents / 100_000).toFixed(1)}k`.replace(".0k", "k");
-  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 export function timeAgo(iso: string): string {

@@ -1,6 +1,9 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import Store from "./pages/Store";
+import TrackDetail from "./pages/TrackDetail";
+import Success from "./pages/Success";
 
 function AppRoutes() {
   const [, navigate] = useLocation();
@@ -11,6 +14,15 @@ function AppRoutes() {
       </Route>
       <Route path="/dashboard">
         <Dashboard onSignOut={() => navigate("/")} />
+      </Route>
+      <Route path="/store">
+        <Store />
+      </Route>
+      <Route path="/store/track/:id">
+        {(params) => <TrackDetail trackId={Number(params.id)} />}
+      </Route>
+      <Route path="/success">
+        <Success />
       </Route>
     </Switch>
   );

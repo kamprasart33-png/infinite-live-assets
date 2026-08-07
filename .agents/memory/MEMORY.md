@@ -1,1 +1,2 @@
 - [Sprint 2 API architecture](sprint2-api.md) — Express routes at /api, Vite proxies /api → localhost:8080; schema in lib/db, services in api-server/src/services
+- [Stripe integration quirks](stripe-quirks.md) — field name, migration bundling, backfill sync issues; how to operate Stripe in this project
