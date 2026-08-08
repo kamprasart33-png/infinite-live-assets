@@ -11,6 +11,7 @@ export const tracks = pgTable("tracks", {
   priceCents: integer("price_cents").notNull().default(4900),
   plays: integer("plays").notNull().default(0),
   fileUrl: varchar("file_url", { length: 500 }),
+  youtubeId: varchar("youtube_id", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

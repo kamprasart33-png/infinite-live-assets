@@ -3,16 +3,15 @@ import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
 import { centsToDisplay } from "@/lib/api";
 
-const GENRES = ["All", "Cinematic Trap", "Ambient", "World Fusion", "Hip-Hop", "Ethereal Ambience", "Lo-Fi", "Electronic"];
-
 const genreColor: Record<string, string> = {
-  "Cinematic Trap": "#00d4aa",
+  "Khmer Hip-Hop": "#e74c3c",
+  "Cinematic": "#00d4aa",
   "Ambient": "#7c6af7",
-  "World Fusion": "#f7a600",
-  "Hip-Hop": "#e74c3c",
   "Ethereal Ambience": "#5bc4f7",
-  "Lo-Fi": "#a8e063",
-  "Electronic": "#ff6b9d",
+  "Lo-Fi Chill": "#a8e063",
+  "Meditation": "#f7a600",
+  "Jazz": "#ff6b9d",
+  "Nature Ambience": "#4cd98a",
 };
 
 export default function Store() {
@@ -21,6 +20,9 @@ export default function Store() {
   const [genre, setGenre] = useState("All");
 
   const { data: tracks = [], isLoading } = useStoreTracks();
+
+  // Genre chips derived from the live catalog so they never go stale
+  const GENRES = ["All", ...Array.from(new Set(tracks.map((t) => t.genre).filter(Boolean) as string[])).sort()];
 
   const filtered = tracks.filter((t) => {
     const matchesQuery =
