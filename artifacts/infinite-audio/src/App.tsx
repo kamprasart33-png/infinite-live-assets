@@ -1,51 +1,63 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
+import { useAuth } from "@workspace/replit-auth-web";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Store from "./pages/Store";
 import TrackDetail from "./pages/TrackDetail";
 import Success from "./pages/Success";
 
-const AUTH_KEY = "ia_session";
-
-function isAuthenticated() {
-  return localStorage.getItem(AUTH_KEY) === "1";
-}
-
-function setAuthenticated(value: boolean) {
-  if (value) {
-    localStorage.setItem(AUTH_KEY, "1");
-  } else {
-    localStorage.removeItem(AUTH_KEY);
+function ProtectedRoute({ children, isAuthenticated, isLoading }: {
+  children: React.ReactNode;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        minHeight: "100vh", background: "#000", color: "#fff",
+        fontFamily: "'Inter', sans-serif"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            border: "3px solid rgba(6,182,212,0.3)",
+            borderTopColor: "var(--cyan-400, #22d3ee)",
+            animation: "spin 0.8s linear infinite",
+            margin: "0 auto 1rem"
+          }} />
+          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading…</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
   }
-}
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  if (!isAuthenticated()) {
+  if (!isAuthenticated) {
     return <Redirect to="/" />;
   }
   return <>{children}</>;
 }
 
 function AppRoutes() {
+  const { isAuthenticated, isLoading, login, logout } = useAuth();
   const [, navigate] = useLocation();
 
   const handleSignIn = () => {
-    setAuthenticated(true);
-    navigate("/dashboard");
+    login();
   };
 
   const handleSignOut = () => {
-    setAuthenticated(false);
+    logout();
     navigate("/");
   };
 
   return (
     <Switch>
       <Route path="/">
-        <Landing onSignIn={handleSignIn} />
+        <Landing onSignIn={handleSignIn} isSignedIn={isAuthenticated} onSignOut={handleSignOut} />
       </Route>
       <Route path="/dashboard">
-        <ProtectedRoute>
+        <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
           <Dashboard onSignOut={handleSignOut} />
         </ProtectedRoute>
       </Route>

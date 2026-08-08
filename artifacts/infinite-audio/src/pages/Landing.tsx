@@ -313,14 +313,12 @@ function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
   );
 }
 
-export default function Landing({ onSignIn }: { onSignIn: () => void }) {
+export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { onSignIn: () => void; isSignedIn?: boolean; onSignOut?: () => void }) {
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
 
   const handleSignIn = () => {
-    setIsSignedIn(true);
     onSignIn();
   };
 
@@ -424,7 +422,7 @@ export default function Landing({ onSignIn }: { onSignIn: () => void }) {
                 </div>
                 {/* Avatar */}
                 <button
-                  onClick={() => setIsSignedIn(false)}
+                  onClick={() => onSignOut?.()}
                   onMouseEnter={() => setAvatarHover(true)}
                   onMouseLeave={() => setAvatarHover(false)}
                   title="Sign out"

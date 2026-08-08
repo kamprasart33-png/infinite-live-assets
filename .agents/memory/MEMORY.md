@@ -1,2 +1,3 @@
 - [Sprint 2 API architecture](sprint2-api.md) — Express routes at /api, Vite proxies /api → localhost:8080; schema in lib/db, services in api-server/src/services
 - [Stripe integration quirks](stripe-quirks.md) — field name, migration bundling, backfill sync issues; how to operate Stripe in this project
+- [Replit Auth setup](replit-auth-setup.md) — OIDC auth wired; replit-auth-web lib, authMiddleware, sessions table; needs composite tsconfig + vite devDep to build

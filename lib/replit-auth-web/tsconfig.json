@@ -6,8 +6,9 @@
     "emitDeclarationOnly": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "jsx": "react-jsx",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "types": ["vite/client"]
   },
-  "include": ["src"],
-  "exclude": ["src/seed.ts"]
+  "include": ["src"]
 }
