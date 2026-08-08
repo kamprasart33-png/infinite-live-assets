@@ -5,9 +5,18 @@ async function getStripeCredentials(): Promise<{
   secretKey: string;
   webhookSecret?: string;
 }> {
-  // Prefer explicit secret key over the Replit connector
-  if (process.env.STRIPE_SECRET_KEY) {
-    return { secretKey: process.env.STRIPE_SECRET_KEY };
+  // Prefer explicit secret key over the Replit connector — but only if it
+  // looks like a real Stripe secret key (sk_ or restricted rk_). Otherwise
+  // fall back to the connector so an invalid value doesn't break checkout.
+  const envKey = process.env.STRIPE_SECRET_KEY;
+  if (envKey && /^(sk|rk)_/.test(envKey)) {
+    return { secretKey: envKey };
+  }
+  if (envKey) {
+    console.warn(
+      "STRIPE_SECRET_KEY is set but is not a valid Stripe secret key " +
+        "(must start with sk_ or rk_). Falling back to the Replit Stripe integration.",
+    );
   }
 
   // Fall back to Replit Stripe integration connector
