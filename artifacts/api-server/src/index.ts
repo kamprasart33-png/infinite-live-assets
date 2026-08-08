@@ -1,6 +1,7 @@
 import { getStripeSync } from "./stripeClient";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { seedTracksIfEmpty } from "./seedTracks";
 
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -41,6 +42,7 @@ if (Number.isNaN(port) || port <= 0)
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 
 await initStripe();
+await seedTracksIfEmpty();
 
 app.listen(port, (err) => {
   if (err) {
