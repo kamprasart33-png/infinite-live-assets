@@ -100,7 +100,9 @@ function ChevronRight({ size = 16 }: { size?: number }) {
   );
 }
 
-const publicLinks = [
+type NavLink = { label: string; href: string; highlight?: boolean };
+
+const publicLinks: NavLink[] = [
   { label: "Library", href: "#tracks" },
   { label: "Licensing", href: "#pricing" },
   { label: "Pricing", href: "#pricing" },
@@ -109,7 +111,7 @@ const publicLinks = [
   { label: "About", href: "#about" },
 ];
 
-const signedInLinks = [
+const signedInLinks: NavLink[] = [
   { label: "Library", href: "#tracks" },
   { label: "Sales", href: "#dashboard" },
   { label: "Licensing", href: "#pricing" },

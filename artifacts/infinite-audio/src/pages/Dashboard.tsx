@@ -98,10 +98,19 @@ function SectionLoader() {
   );
 }
 
-function SectionError({ message }: { message: string }) {
+function SectionError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: C.red, padding: "1rem", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10 }}>
-      <AlertCircle size={16} /> {message}
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: C.red, padding: "1rem 1.25rem", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10 }}>
+      <AlertCircle size={16} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>{message}</span>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)", color: C.red, borderRadius: 8, padding: "0.35rem 0.85rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+        >
+          <RefreshCw size={12} /> Retry
+        </button>
+      )}
     </div>
   );
 }
@@ -109,10 +118,10 @@ function SectionError({ message }: { message: string }) {
 // ─── Section: Revenue ─────────────────────────────────────────────────────────
 
 function RevenueSection() {
-  const { data: metrics, isLoading: mLoading, error: mErr } = useDashboardMetrics();
-  const { data: history, isLoading: hLoading } = useRevenueHistory();
-  const { data: byType, isLoading: tLoading } = useLicensesByType();
-  const { data: topTracks, isLoading: trLoading } = useTopTracks(5);
+  const { data: metrics, isLoading: mLoading, error: mErr, refetch: refetchMetrics } = useDashboardMetrics();
+  const { data: history, isLoading: hLoading, error: hErr, refetch: refetchHistory } = useRevenueHistory();
+  const { data: byType, isLoading: tLoading, error: tErr, refetch: refetchByType } = useLicensesByType();
+  const { data: topTracks, isLoading: trLoading, error: trErr, refetch: refetchTopTracks } = useTopTracks(5);
 
   const historyData = (history ?? []).map(r => ({
     month: r.month,
@@ -129,6 +138,13 @@ function RevenueSection() {
   return (
     <div>
       <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "1.5rem" }}>Revenue Overview</h2>
+
+      {mErr && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionError message="Failed to load revenue metrics" onRetry={refetchMetrics} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
         <KpiCard label="Today" value={mErr ? "—" : centsToDisplay(metrics?.todayRevenueCents ?? 0)} loading={mLoading} />
         <KpiCard label="This Month" value={mErr ? "—" : centsToDisplay(metrics?.monthlyRevenueCents ?? 0)} sub="Live data" up loading={mLoading} />
@@ -139,7 +155,7 @@ function RevenueSection() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem" }}>
         <div style={card({ padding: "1.5rem" })}>
           <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", color: C.sub }}>12-Month Revenue</div>
-          {hLoading ? <SectionLoader /> : (
+          {hErr ? <SectionError message="Failed to load revenue history" onRetry={refetchHistory} /> : hLoading ? <SectionLoader /> : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={historyData}>
                 <defs>
@@ -161,7 +177,7 @@ function RevenueSection() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <div style={card({ padding: "1.25rem", flex: 1 })}>
             <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "1rem", color: C.sub }}>By License Type</div>
-            {tLoading ? <SectionLoader /> : (
+            {tErr ? <SectionError message="Failed to load license breakdown" onRetry={refetchByType} /> : tLoading ? <SectionLoader /> : (
               <>
                 <ResponsiveContainer width="100%" height={130}>
                   <PieChart>
@@ -185,7 +201,7 @@ function RevenueSection() {
 
           <div style={card({ padding: "1.25rem", flex: 1 })}>
             <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.85rem", color: C.sub }}>Top Earners</div>
-            {trLoading ? <SectionLoader /> : (topTracks ?? []).map((t: TopTrack) => (
+            {trErr ? <SectionError message="Failed to load top tracks" onRetry={refetchTopTracks} /> : trLoading ? <SectionLoader /> : (topTracks ?? []).map((t: TopTrack) => (
               <div key={t.id} style={{ marginBottom: "0.65rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "0.25rem" }}>
                   <span>{t.title}</span>
@@ -208,7 +224,7 @@ function RevenueSection() {
 function LibrarySection() {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const { data: tracks, isLoading, error } = useTracks();
+  const { data: tracks, isLoading, error, refetch } = useTracks();
 
   const genres = ["All", ...Array.from(new Set((tracks ?? []).map(t => t.genre).filter(Boolean) as string[]))];
   const filtered = (tracks ?? []).filter(t =>
@@ -247,7 +263,7 @@ function LibrarySection() {
         </div>
       </div>
 
-      {error ? <SectionError message="Failed to load tracks" /> : isLoading ? <SectionLoader /> : (
+      {error ? <SectionError message="Failed to load tracks" onRetry={refetch} /> : isLoading ? <SectionLoader /> : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1rem" }}>
           {filtered.map((t: Track) => (
             <div key={t.id}
@@ -283,7 +299,7 @@ function LibrarySection() {
 
 function LicensesSection() {
   const { data: metrics, isLoading: mLoading } = useDashboardMetrics();
-  const { data: licenses, isLoading, error } = useActiveLicenses();
+  const { data: licenses, isLoading, error, refetch } = useActiveLicenses();
 
   return (
     <div>
@@ -295,7 +311,7 @@ function LicensesSection() {
         <KpiCard label="Avg License" value={centsToDisplay(metrics?.avgLicenseCents ?? 0)} loading={mLoading} />
       </div>
 
-      {error ? <SectionError message="Failed to load licenses" /> : isLoading ? <SectionLoader /> : (
+      {error ? <SectionError message="Failed to load licenses" onRetry={refetch} /> : isLoading ? <SectionLoader /> : (
         <div style={card({ overflow: "hidden" })}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
             <thead>
@@ -333,7 +349,7 @@ function LicensesSection() {
 
 function CustomersSection() {
   const { data: metrics, isLoading: mLoading } = useDashboardMetrics();
-  const { data: customers, isLoading, error } = useCustomers();
+  const { data: customers, isLoading, error, refetch } = useCustomers();
 
   return (
     <div>
@@ -349,7 +365,7 @@ function CustomersSection() {
         <KpiCard label="Total Revenue" value={centsToDisplay(metrics?.totalRevenueCents ?? 0)} loading={mLoading} />
       </div>
 
-      {error ? <SectionError message="Failed to load customers" /> : isLoading ? <SectionLoader /> : (
+      {error ? <SectionError message="Failed to load customers" onRetry={refetch} /> : isLoading ? <SectionLoader /> : (
         <div style={card({ overflow: "hidden" })}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
             <thead>
@@ -391,9 +407,9 @@ function CustomersSection() {
 // ─── Section: Sales ───────────────────────────────────────────────────────────
 
 function SalesSection() {
-  const { data: metrics, isLoading: mLoading } = useDashboardMetrics();
-  const { data: dailySales, isLoading: dLoading } = useDailySales();
-  const { data: recent, isLoading: rLoading } = useRecentTransactions(6);
+  const { data: metrics, isLoading: mLoading, error: mErr, refetch: refetchMetrics } = useDashboardMetrics();
+  const { data: dailySales, isLoading: dLoading, error: dErr, refetch: refetchDailySales } = useDailySales();
+  const { data: recent, isLoading: rLoading, error: rErr, refetch: refetchRecent } = useRecentTransactions(6);
 
   const salesChartData = (dailySales ?? []).map(r => ({
     day: r.day,
@@ -403,17 +419,24 @@ function SalesSection() {
   return (
     <div>
       <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "1.5rem" }}>Sales</h2>
+
+      {mErr && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionError message="Failed to load sales metrics" onRetry={refetchMetrics} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
-        <KpiCard label="Today" value={centsToDisplay(metrics?.todayRevenueCents ?? 0)} loading={mLoading} />
-        <KpiCard label="Monthly" value={centsToDisplay(metrics?.monthlyRevenueCents ?? 0)} loading={mLoading} sub="Live" up />
-        <KpiCard label="Total Sales" value={String(metrics?.totalSales ?? "—")} loading={mLoading} />
-        <KpiCard label="Active Licenses" value={String(metrics?.activeLicenses ?? "—")} loading={mLoading} />
+        <KpiCard label="Today" value={mErr ? "—" : centsToDisplay(metrics?.todayRevenueCents ?? 0)} loading={mLoading} />
+        <KpiCard label="Monthly" value={mErr ? "—" : centsToDisplay(metrics?.monthlyRevenueCents ?? 0)} loading={mLoading} sub="Live" up />
+        <KpiCard label="Total Sales" value={mErr ? "—" : String(metrics?.totalSales ?? "—")} loading={mLoading} />
+        <KpiCard label="Active Licenses" value={mErr ? "—" : String(metrics?.activeLicenses ?? "—")} loading={mLoading} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem" }}>
         <div style={card({ padding: "1.5rem" })}>
           <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", color: C.sub }}>Daily Sales — Last 14 Days</div>
-          {dLoading ? <SectionLoader /> : (
+          {dErr ? <SectionError message="Failed to load daily sales" onRetry={refetchDailySales} /> : dLoading ? <SectionLoader /> : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={salesChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -428,7 +451,7 @@ function SalesSection() {
 
         <div style={card({ padding: "1.5rem" })}>
           <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "1rem", color: C.sub }}>Recent Transactions</div>
-          {rLoading ? <SectionLoader /> : (recent ?? []).map((tx: Transaction) => (
+          {rErr ? <SectionError message="Failed to load transactions" onRetry={refetchRecent} /> : rLoading ? <SectionLoader /> : (recent ?? []).map((tx: Transaction) => (
             <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <div>
                 <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{tx.trackTitle ?? "—"}</div>
@@ -446,11 +469,11 @@ function SalesSection() {
 // ─── Section: Analytics ───────────────────────────────────────────────────────
 
 function AnalyticsSection() {
-  const { data: metrics, isLoading: mLoading } = useDashboardMetrics();
-  const { data: history, isLoading: hLoading } = useRevenueHistory();
+  const { data: metrics, isLoading: mLoading, error: mErr, refetch: refetchMetrics } = useDashboardMetrics();
+  const { data: history, isLoading: hLoading, error: hErr, refetch: refetchHistory } = useRevenueHistory();
 
   // Build visitor-like data from revenue history for the line chart
-  const lineData = (history ?? []).map((r, i) => ({
+  const lineData = (history ?? []).map((r) => ({
     month: r.month,
     revenue: Math.round(Number(r.revenue) / 100),
     transactions: Math.round(Number(r.revenue) / 6500), // rough avg license
@@ -459,16 +482,23 @@ function AnalyticsSection() {
   return (
     <div>
       <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "1.5rem" }}>Analytics</h2>
+
+      {mErr && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionError message="Failed to load analytics metrics" onRetry={refetchMetrics} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
-        <KpiCard label="Total Tracks" value={String(metrics?.totalTracks ?? "—")} loading={mLoading} />
-        <KpiCard label="Active Customers" value={String(metrics?.activeCustomers ?? "—")} loading={mLoading} />
-        <KpiCard label="Total Sales" value={String(metrics?.totalSales ?? "—")} loading={mLoading} />
-        <KpiCard label="Total Revenue" value={centsToDisplay(metrics?.totalRevenueCents ?? 0)} loading={mLoading} />
+        <KpiCard label="Total Tracks" value={mErr ? "—" : String(metrics?.totalTracks ?? "—")} loading={mLoading} />
+        <KpiCard label="Active Customers" value={mErr ? "—" : String(metrics?.activeCustomers ?? "—")} loading={mLoading} />
+        <KpiCard label="Total Sales" value={mErr ? "—" : String(metrics?.totalSales ?? "—")} loading={mLoading} />
+        <KpiCard label="Total Revenue" value={mErr ? "—" : centsToDisplay(metrics?.totalRevenueCents ?? 0)} loading={mLoading} />
       </div>
 
       <div style={card({ padding: "1.5rem" })}>
         <div style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", color: C.sub }}>Revenue & Transaction Volume — 12 Months</div>
-        {hLoading ? <SectionLoader /> : (
+        {hErr ? <SectionError message="Failed to load revenue history" onRetry={refetchHistory} /> : hLoading ? <SectionLoader /> : (
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={lineData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -743,7 +773,10 @@ const NAV = [
 
 export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [active, setActive] = useState("revenue");
-  const { data: metrics } = useDashboardMetrics();
+  const { data: metrics, error: metricsError, isFetching: metricsFetching } = useDashboardMetrics();
+
+  // True when the API is unreachable — covers both failed initial loads and failed background refreshes
+  const isStale = !!metricsError && !metricsFetching;
 
   const SECTIONS: Record<string, React.ReactNode> = {
     revenue:   <RevenueSection />,
@@ -844,9 +877,15 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                 {metrics.totalTracks} tracks · {metrics.activeCustomers} customers · {metrics.activeLicenses} licenses
               </div>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 9999, padding: "0.25rem 0.75rem" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block" }} />
-              <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 600 }}>LIVE</span>
+            {isStale && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 9999, padding: "0.25rem 0.75rem" }}>
+                <AlertCircle size={11} color={C.amber} />
+                <span style={{ fontSize: "0.72rem", color: C.amber, fontWeight: 600 }}>Data may be outdated</span>
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: isStale ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isStale ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)"}`, borderRadius: 9999, padding: "0.25rem 0.75rem" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isStale ? C.red : C.green, display: "inline-block" }} />
+              <span style={{ fontSize: "0.72rem", color: isStale ? C.red : C.green, fontWeight: 600 }}>{isStale ? "OFFLINE" : "LIVE"}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)", borderRadius: 9999, padding: "0.25rem 0.75rem" }}>
               <TrendingUp size={12} color={C.cyan} />

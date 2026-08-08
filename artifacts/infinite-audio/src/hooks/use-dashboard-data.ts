@@ -1,8 +1,11 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 const STALE = 30_000; // 30s
 const LIVE_REFETCH = 30_000; // auto-refresh every 30s
+
+// Exponential backoff: 1s → 2s → 4s (matches QueryClient default; listed here for clarity)
+const RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 8000);
 
 export function useDashboardMetrics() {
   return useQuery({
@@ -10,6 +13,9 @@ export function useDashboardMetrics() {
     queryFn: api.metrics.dashboard,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -19,6 +25,9 @@ export function useRevenueHistory() {
     queryFn: api.metrics.revenueHistory,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -28,6 +37,9 @@ export function useDailySales() {
     queryFn: api.metrics.dailySales,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -36,6 +48,9 @@ export function useTracks() {
     queryKey: ["tracks"],
     queryFn: api.tracks.all,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -45,6 +60,9 @@ export function useTopTracks(limit = 10) {
     queryFn: () => api.tracks.topSelling(limit),
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -54,6 +72,9 @@ export function useCustomers() {
     queryFn: api.customers.all,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -63,6 +84,9 @@ export function useRecentTransactions(limit = 10) {
     queryFn: () => api.transactions.recent(limit),
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -72,6 +96,9 @@ export function useActiveLicenses() {
     queryFn: api.transactions.activeLicenses,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
@@ -81,6 +108,9 @@ export function useLicensesByType() {
     queryFn: api.transactions.byType,
     staleTime: STALE,
     refetchInterval: LIVE_REFETCH,
+    placeholderData: keepPreviousData,
+    retry: 3,
+    retryDelay: RETRY_DELAY,
   });
 }
 
