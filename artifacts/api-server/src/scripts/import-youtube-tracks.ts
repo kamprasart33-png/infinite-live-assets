@@ -4,17 +4,27 @@
  * Run: node_modules/.bin/tsx artifacts/api-server/src/scripts/import-youtube-tracks.ts
  */
 import { db } from "@workspace/db";
-import { tracks } from "@workspace/db/schema";
-import { isNull, eq } from "drizzle-orm";
+import { tracks, orders, licenses, transactions } from "@workspace/db/schema";
+import { isNull, and, eq, inArray } from "drizzle-orm";
 import { TRACK_CATALOG } from "../trackCatalog";
 
 async function run() {
-  // Remove demo tracks (they have no youtubeId and no fileUrl)
-  const removed = await db
-    .delete(tracks)
-    .where(isNull(tracks.youtubeId))
-    .returning({ id: tracks.id, title: tracks.title });
-  console.log(`Removed ${removed.length} demo track(s)`);
+  // Remove demo tracks — but only rows with no uploaded audio file and no
+  // references from historical orders/licenses/transactions.
+  const referenced = new Set<number>();
+  for (const table of [orders, licenses, transactions]) {
+    const rows = await db.select({ trackId: table.trackId }).from(table);
+    for (const r of rows) if (r.trackId != null) referenced.add(r.trackId);
+  }
+  const demoRows = await db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .where(and(isNull(tracks.youtubeId), isNull(tracks.fileUrl)));
+  const deletable = demoRows.map((t) => t.id).filter((id) => !referenced.has(id));
+  const removed = deletable.length
+    ? await db.delete(tracks).where(inArray(tracks.id, deletable)).returning({ id: tracks.id })
+    : [];
+  console.log(`Removed ${removed.length} demo track(s); kept ${demoRows.length - removed.length} referenced/file-backed`);
 
   let created = 0,
     updated = 0;

@@ -1,35 +1,29 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useStoreTracks } from "@/hooks/use-dashboard-data";
+import { centsToDisplay } from "@/lib/api";
 import "../index.css";
 
-const tracks = [
-  {
-    id: 1,
-    title: "Celestial Whispers",
-    artist: "KHMER SMOKE",
-    description: "ethereal night ambience for deep calm & meditation",
-    duration: "3:24",
-    genre: "Ethereal Ambience",
-    price: "$49",
-  },
-  {
-    id: 2,
-    title: "Urban Pulse",
-    artist: "KHMER SMOKE",
-    description: "hard-hitting beats with traditional Khmer undertones",
-    duration: "2:58",
-    genre: "Cinematic Trap",
-    price: "$79",
-  },
-  {
-    id: 3,
-    title: "Golden Hour",
-    artist: "KHMER SMOKE",
-    description: "relaxing lo-fi beats perfect for content creation",
-    duration: "4:12",
-    genre: "Lo-Fi Chill",
-    price: "$49",
-  },
-];
+type FeaturedTrack = {
+  id: number;
+  title: string;
+  artist: string;
+  description: string;
+  duration: string;
+  genre: string;
+  price: string;
+};
+
+const genreBlurb: Record<string, string> = {
+  "Khmer Hip-Hop": "hard-hitting beats with traditional Khmer roots",
+  "Ethereal Ambience": "ethereal night ambience for deep calm & meditation",
+  "Lo-Fi Chill": "relaxing lo-fi beats perfect for content creation",
+  "Cinematic": "cinematic atmosphere for film, trailers & urban visuals",
+  "Meditation": "peaceful flute & meditation soundscapes",
+  "Ambient": "dreamy ambient textures for focus & relaxation",
+  "Jazz": "smooth jazz grooves for cozy scenes",
+  "Nature Ambience": "natural soundscapes to relax and unwind",
+};
 
 const testimonials = [
   {
@@ -317,6 +311,21 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
+  const [, navigate] = useLocation();
+
+  const { data: storeTracks = [] } = useStoreTracks();
+  const tracks = [...storeTracks]
+    .sort((a, b) => (b.plays ?? 0) - (a.plays ?? 0))
+    .slice(0, 6)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      description: (t.genre && genreBlurb[t.genre]) || "original track from the Infinite Audio Archive",
+      duration: t.duration ?? "",
+      genre: t.genre ?? "",
+      price: centsToDisplay(t.priceCents),
+    }));
 
   const handleSignIn = () => {
     onSignIn();
@@ -736,10 +745,14 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
           <div>
             <h2 style={{ fontSize: "2.25rem", fontWeight: 700 }}>Featured Tracks</h2>
             <p style={{ color: "#9ca3af", fontSize: "0.875rem", marginTop: "0.5rem" }}>
-              ARCHIVE_SYNC: 5 TRACKS LOADED • MORE COMING SOON
+              ARCHIVE_SYNC: {storeTracks.length} TRACKS LOADED • MORE COMING SOON
             </p>
           </div>
-          <a href="#" style={{ color: "var(--cyan-400)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigate("/store"); }}
+            style={{ color: "var(--cyan-400)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
             View All <ChevronRight />
           </a>
         </div>
@@ -1610,7 +1623,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 function TrackCard({ track, isPlaying, onTogglePlay }: {
-  track: typeof tracks[0]; isPlaying: boolean; onTogglePlay: () => void;
+  track: FeaturedTrack; isPlaying: boolean; onTogglePlay: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   return (
