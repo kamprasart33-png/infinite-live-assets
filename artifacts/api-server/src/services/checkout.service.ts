@@ -1,6 +1,13 @@
+import { randomBytes } from "node:crypto";
 import { db } from "@workspace/db";
-import { orders, transactions } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  orders,
+  transactions,
+  customers,
+  licenses,
+  invoices,
+} from "@workspace/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 
 export interface CreateSessionParams {
@@ -43,13 +50,135 @@ export async function createCheckoutSession(params: CreateSessionParams) {
   return session;
 }
 
-export async function fulfillOrder(sessionId: string) {
-  // Idempotent — return existing order if already fulfilled
+/** Cryptographically random license key, e.g. LIC-8F3A2-BC91D-7E04A */
+function generateLicenseKey(): string {
+  const hex = randomBytes(8).toString("hex").toUpperCase();
+  return `LIC-${hex.slice(0, 5)}-${hex.slice(5, 10)}-${hex.slice(10, 15)}`;
+}
+
+type Order = typeof orders.$inferSelect;
+
+/**
+ * Creates/heals the connected business records for a paid order:
+ * customer (upsert by email), license, invoice, and dashboard transaction.
+ *
+ * Runs in a single DB transaction so a partial failure rolls back atomically.
+ * Idempotent: the license row (unique per order) acts as the "already
+ * processed" marker — spend accumulation and the dashboard transaction are
+ * only written when the license is inserted for the first time.
+ */
+export async function ensureBusinessRecords(order: Order) {
+  return db.transaction(async (tx) => {
+    // 1. Upsert customer by email (repeat buyers reuse their record)
+    const [customer] = await tx
+      .insert(customers)
+      .values({
+        name: order.customerName,
+        email: order.customerEmail,
+        status: "active",
+        totalSpentCents: 0,
+      })
+      .onConflictDoUpdate({
+        target: customers.email,
+        set: { name: order.customerName },
+      })
+      .returning();
+
+    // 2. License — insert succeeds only the first time for this order
+    const [license] = await tx
+      .insert(licenses)
+      .values({
+        licenseKey: generateLicenseKey(),
+        orderId: order.id,
+        customerId: customer.id,
+        trackId: order.trackId,
+        trackTitle: order.trackTitle,
+        licenseType: order.licenseType,
+        status: "active",
+      })
+      .onConflictDoNothing({ target: licenses.orderId })
+      .returning();
+
+    const firstTime = Boolean(license);
+
+    // 3. Invoice — prefer the order's invoice number; fall back to a
+    //    deterministic per-order number if that value already exists
+    //    (random-number collision across orders).
+    const preferredNumber =
+      order.invoiceNumber ?? `KS-${new Date().getFullYear()}-O${order.id}`;
+    let [invoice] = await tx
+      .insert(invoices)
+      .values({
+        invoiceNumber: preferredNumber,
+        orderId: order.id,
+        customerId: customer.id,
+        description: `${order.licenseType} License — ${order.trackTitle ?? "Track"}`,
+        amountCents: order.amountCents,
+        currency: "usd",
+        status: "paid",
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!invoice) {
+      const existing = await tx
+        .select()
+        .from(invoices)
+        .where(eq(invoices.orderId, order.id));
+      if (existing.length > 0) {
+        invoice = existing[0];
+      } else {
+        // invoiceNumber collision with a different order — use deterministic ID
+        [invoice] = await tx
+          .insert(invoices)
+          .values({
+            invoiceNumber: `KS-${new Date().getFullYear()}-O${order.id}`,
+            orderId: order.id,
+            customerId: customer.id,
+            description: `${order.licenseType} License — ${order.trackTitle ?? "Track"}`,
+            amountCents: order.amountCents,
+            currency: "usd",
+            status: "paid",
+          })
+          .returning();
+      }
+    }
+
+    if (firstTime) {
+      // 4. Count this order's amount toward the customer exactly once
+      await tx
+        .update(customers)
+        .set({
+          totalSpentCents: sql`${customers.totalSpentCents} + ${order.amountCents}`,
+        })
+        .where(eq(customers.id, customer.id));
+
+      // 5. Dashboard transaction — same atomic scope, written exactly once
+      await tx.insert(transactions).values({
+        trackId: order.trackId,
+        customerId: customer.id,
+        trackTitle: order.trackTitle ?? "Unknown Track",
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        licenseType: order.licenseType,
+        amountCents: order.amountCents,
+        status: "active",
+      });
+    }
+
+    return { customer, license, invoice, firstTime };
+  });
+}
+
+export async function fulfillOrder(sessionId: string): Promise<Order> {
+  // Fast path — order already exists; heal any missing connected records
   const existing = await db
     .select()
     .from(orders)
     .where(eq(orders.stripeSessionId, sessionId));
-  if (existing.length > 0) return existing[0];
+  if (existing.length > 0) {
+    await ensureBusinessRecords(existing[0]); // let failures surface
+    return existing[0];
+  }
 
   const stripe = await getUncachableStripeClient();
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -72,7 +201,9 @@ export async function fulfillOrder(sessionId: string) {
     (session.customer_details as any)?.email ||
     "";
 
-  const [order] = await db
+  // Race-safe insert: concurrent fulfillments of the same session — one wins,
+  // the loser fetches the winner's row and proceeds identically.
+  let [order] = await db
     .insert(orders)
     .values({
       stripeSessionId: sessionId,
@@ -89,23 +220,18 @@ export async function fulfillOrder(sessionId: string) {
       status: "completed",
       invoiceNumber,
     })
+    .onConflictDoNothing({ target: orders.stripeSessionId })
     .returning();
 
-  // Record transaction so dashboard updates automatically
-  try {
-    await db.insert(transactions).values({
-      trackId: meta.track_id ? parseInt(meta.track_id) : null,
-      customerId: null,
-      trackTitle: meta.track_title ?? "Unknown Track",
-      customerName,
-      customerEmail,
-      licenseType: meta.license_type ?? "Unknown",
-      amountCents,
-      status: "active",
-    });
-  } catch {
-    // Don't fail the order if transaction insert fails
+  if (!order) {
+    const [winner] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.stripeSessionId, sessionId));
+    if (!winner) throw new Error("Order creation failed unexpectedly");
+    order = winner;
   }
 
+  await ensureBusinessRecords(order);
   return order;
 }
