@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { index, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgEnum, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// This table backs both browser (cookie) and mobile (bearer token) sessions.
 export const sessionsTable = pgTable(
   'sessions',
   {
@@ -12,12 +12,18 @@ export const sessionsTable = pgTable(
   (table) => [index('IDX_session_expire').on(table.expire)],
 );
 
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const userRoleEnum = pgEnum('user_role', ['admin', 'staff']);
+
+// Internal admin/staff accounts. Authenticated via email + password
+// (see artifacts/api-server/src/lib/auth.ts) — not related to customers,
+// who purchase licenses without an account.
 export const usersTable = pgTable('users', {
   id: varchar('id')
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   email: varchar('email').unique(),
+  passwordHash: varchar('password_hash'),
+  role: userRoleEnum('role').notNull().default('staff'),
   firstName: varchar('first_name'),
   lastName: varchar('last_name'),
   profileImageUrl: varchar('profile_image_url'),

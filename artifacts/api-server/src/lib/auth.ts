@@ -1,31 +1,31 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import type { AuthUser } from '@workspace/api-zod';
 import { db, sessionsTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
-import * as client from 'openid-client';
 
-export const ISSUER_URL = process.env.ISSUER_URL ?? 'https://replit.com/oidc';
 export const SESSION_COOKIE = 'sid';
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 
+// Sessions never expire on their own while in use — expiry only advances on
+// login/refresh. There is no OAuth access/refresh token anymore, so a
+// session is just "this user is logged in".
 export interface SessionData {
   user: AuthUser;
-  access_token: string;
-  refresh_token?: string;
-  expires_at?: number;
 }
 
-let oidcConfig: client.Configuration | null = null;
+const BCRYPT_COST_FACTOR = 12;
 
-export async function getOidcConfig(): Promise<client.Configuration> {
-  if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
-  }
-  return oidcConfig;
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_COST_FACTOR);
+}
+
+export async function verifyPassword(
+  password: string,
+  passwordHash: string,
+): Promise<boolean> {
+  return bcrypt.compare(password, passwordHash);
 }
 
 export async function createSession(data: SessionData): Promise<string> {
@@ -72,6 +72,16 @@ export async function deleteSession(sid: string): Promise<void> {
 export async function clearSession(res: Response, sid?: string): Promise<void> {
   if (sid) await deleteSession(sid);
   res.clearCookie(SESSION_COOKIE, { path: '/' });
+}
+
+export function setSessionCookie(res: Response, sid: string): void {
+  res.cookie(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_TTL,
+  });
 }
 
 export function getSessionId(req: Request): string | undefined {

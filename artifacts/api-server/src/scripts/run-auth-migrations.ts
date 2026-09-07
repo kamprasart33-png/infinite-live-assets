@@ -29,15 +29,34 @@ await db.execute(sql`
 `);
 
 await db.execute(sql`
+  DO $$ BEGIN
+    CREATE TYPE "user_role" AS ENUM ('admin', 'staff');
+  EXCEPTION
+    WHEN duplicate_object THEN null;
+  END $$;
+`);
+
+await db.execute(sql`
   CREATE TABLE IF NOT EXISTS "users" (
     "id"                varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     "email"             varchar UNIQUE,
+    "password_hash"     varchar,
+    "role"              "user_role" NOT NULL DEFAULT 'staff',
     "first_name"        varchar,
     "last_name"         varchar,
     "profile_image_url" varchar,
     "created_at"        timestamptz NOT NULL DEFAULT now(),
     "updated_at"        timestamptz NOT NULL DEFAULT now()
   )
+`);
+
+// Idempotent — adds the new columns if this ran previously under the old
+// (Replit OIDC) schema, without touching existing rows.
+await db.execute(sql`
+  ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "password_hash" varchar
+`);
+await db.execute(sql`
+  ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" "user_role" NOT NULL DEFAULT 'staff'
 `);
 
 console.log("✅ Auth schema migrations complete.");

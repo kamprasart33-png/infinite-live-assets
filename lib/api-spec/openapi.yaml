@@ -41,74 +41,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthUserEnvelope'
-  /login:
-    get:
-      tags: [Auth]
-      operationId: beginBrowserLogin
-      summary: Start the browser OIDC login flow
-      parameters:
-        - name: returnTo
-          in: query
-          required: false
-          description: Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-          schema:
-            type: string
-      responses:
-        '302':
-          description: Redirect to the OIDC authorization endpoint.
-  /callback:
-    get:
-      tags: [Auth]
-      operationId: handleBrowserLoginCallback
-      summary: Complete the browser OIDC login flow
-      parameters:
-        - name: code
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: iss
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uri
-      responses:
-        '302':
-          description: Redirect to the `returnTo` path on success (defaults to `/`) or `/api/login` on failure.
-  /logout:
-    get:
-      tags: [Auth]
-      operationId: logoutBrowserSession
-      summary: Clear the session and begin OIDC logout
-      parameters:
-        - $ref: '#/components/parameters/AuthorizationSessionHeader'
-        - $ref: '#/components/parameters/SessionCookie'
-        - name: returnTo
-          in: query
-          required: false
-          schema:
-            type: string
-            default: /
-      responses:
-        '302':
-          description: Redirect to the OIDC provider logout URL with a post-logout redirect back to the validated `returnTo` path.
-  /mobile-auth/token-exchange:
+  /auth/login:
     post:
       tags: [Auth]
-      operationId: exchangeMobileAuthorizationCode
-      summary: Exchange a mobile OIDC code for a session token
+      operationId: loginWithPassword
+      summary: Log in with email and password, creating a session cookie.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login succeeded, session cookie set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+        '401':
+          description: Invalid email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the current session.
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Session cleared successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: registerUser
+      summary: Create a new staff/admin account. Requires an authenticated admin session.
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Account created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+        '400':
+          description: Invalid input, or an account with that email already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Authenticated user is not an admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/login:
+    post:
+      tags: [Auth]
+      operationId: loginMobileSession
+      summary: Log in with email and password, returning a bearer session token for mobile clients.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Session created successfully.
@@ -116,20 +137,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MobileTokenExchangeSuccess'
-        '400':
-          description: Missing or invalid required fields.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
         '401':
-          description: Token did not contain usable claims.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
-          description: Token exchange failed.
+          description: Invalid email or password.
           content:
             application/json:
               schema:
@@ -174,7 +183,7 @@ components:
         - status
     AuthUser:
       type: object
-      required: [id]
+      required: [id, role]
       properties:
         id:
           type: string
@@ -190,6 +199,9 @@ components:
         profileImageUrl:
           type: string
           nullable: true
+        role:
+          type: string
+          enum: [admin, staff]
     AuthUserEnvelope:
       type: object
       required: [user]
@@ -198,26 +210,36 @@ components:
           oneOf:
             - $ref: '#/components/schemas/AuthUser'
             - type: 'null'
-    MobileTokenExchangeRequest:
+    LoginRequest:
       type: object
-      required: [code, code_verifier, redirect_uri, state]
+      required: [email, password]
       properties:
-        code:
+        email:
+          type: string
+          format: email
+        password:
           type: string
           minLength: 1
-        code_verifier:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
           type: string
-          minLength: 1
-        redirect_uri:
+          format: email
+        password:
           type: string
-          minLength: 1
-          format: uri
-        state:
+          minLength: 8
+        firstName:
           type: string
-          minLength: 1
-        nonce:
+          nullable: true
+        lastName:
           type: string
-          minLength: 1
+          nullable: true
+        role:
+          type: string
+          enum: [admin, staff]
+          default: staff
     MobileTokenExchangeSuccess:
       type: object
       required: [token]

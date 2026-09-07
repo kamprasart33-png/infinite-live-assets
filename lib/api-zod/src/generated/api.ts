@@ -33,43 +33,38 @@ export const GetCurrentAuthUserResponse = zod.object({
       firstName: zod.string().nullish(),
       lastName: zod.string().nullish(),
       profileImageUrl: zod.string().nullish(),
+      role: zod.enum(["admin", "staff"]),
     }),
     zod.null(),
   ]),
 });
 
 /**
- * @summary Start the browser OIDC login flow
+ * @summary Log in with email and password, creating a session cookie.
  */
-export const BeginBrowserLoginQueryParams = zod.object({
-  returnTo: zod.coerce
-    .string()
-    .optional()
-    .describe(
-      "Relative path to redirect to after login (must start with `\/`). Defaults to `\/`.",
-    ),
+
+export const LoginWithPasswordBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string().min(1),
+});
+
+export const LoginWithPasswordResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      profileImageUrl: zod.string().nullish(),
+      role: zod.enum(["admin", "staff"]),
+    }),
+    zod.null(),
+  ]),
 });
 
 /**
- * @summary Complete the browser OIDC login flow
+ * @summary Clear the current session.
  */
-export const HandleBrowserLoginCallbackQueryParams = zod.object({
-  code: zod.coerce.string().optional(),
-  state: zod.coerce.string().optional(),
-  iss: zod.coerce.string().url().optional(),
-});
-
-/**
- * @summary Clear the session and begin OIDC logout
- */
-export const logoutBrowserSessionQueryReturnToDefault = `/`;
-
-export const LogoutBrowserSessionQueryParams = zod.object({
-  returnTo: zod.coerce
-    .string()
-    .default(logoutBrowserSessionQueryReturnToDefault),
-});
-
 export const LogoutBrowserSessionHeader = zod.object({
   Authorization: zod
     .string()
@@ -77,19 +72,56 @@ export const LogoutBrowserSessionHeader = zod.object({
     .describe("Bearer session token (used by mobile clients)."),
 });
 
-/**
- * @summary Exchange a mobile OIDC code for a session token
- */
-
-export const ExchangeMobileAuthorizationCodeBody = zod.object({
-  code: zod.string().min(1),
-  code_verifier: zod.string().min(1),
-  redirect_uri: zod.string().url().min(1),
-  state: zod.string().min(1),
-  nonce: zod.string().min(1).optional(),
+export const LogoutBrowserSessionResponse = zod.object({
+  success: zod.boolean(),
 });
 
-export const ExchangeMobileAuthorizationCodeResponse = zod.object({
+/**
+ * @summary Create a new staff/admin account. Requires an authenticated admin session.
+ */
+export const RegisterUserHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Bearer session token (used by mobile clients)."),
+});
+
+export const registerUserBodyPasswordMin = 8;
+
+export const registerUserBodyRoleDefault = `staff`;
+
+export const RegisterUserBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string().min(registerUserBodyPasswordMin),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  role: zod.enum(["admin", "staff"]).default(registerUserBodyRoleDefault),
+});
+
+export const RegisterUserResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      profileImageUrl: zod.string().nullish(),
+      role: zod.enum(["admin", "staff"]),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Log in with email and password, returning a bearer session token for mobile clients.
+ */
+
+export const LoginMobileSessionBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string().min(1),
+});
+
+export const LoginMobileSessionResponse = zod.object({
   token: zod.string(),
 });
 

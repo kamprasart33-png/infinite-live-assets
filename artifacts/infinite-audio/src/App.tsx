@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
 import Landing from "./pages/Landing";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Store from "./pages/Store";
 import TrackDetail from "./pages/TrackDetail";
@@ -39,15 +40,15 @@ function ProtectedRoute({ children, isAuthenticated, isLoading }: {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading, login, logout } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const [, navigate] = useLocation();
 
   const handleSignIn = () => {
-    login();
+    navigate("/login");
   };
 
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -55,6 +56,9 @@ function AppRoutes() {
     <Switch>
       <Route path="/">
         <Landing onSignIn={handleSignIn} isSignedIn={isAuthenticated} onSignOut={handleSignOut} />
+      </Route>
+      <Route path="/login">
+        {isAuthenticated ? <Redirect to="/dashboard" /> : <Login />}
       </Route>
       <Route path="/dashboard">
         <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>

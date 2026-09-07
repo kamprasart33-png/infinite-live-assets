@@ -9,29 +9,47 @@ export interface HealthStatus {
   status: string;
 }
 
+export type AuthUserRole = (typeof AuthUserRole)[keyof typeof AuthUserRole];
+
+export const AuthUserRole = {
+  admin: "admin",
+  staff: "staff",
+} as const;
+
 export interface AuthUser {
   id: string;
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   profileImageUrl?: string | null;
+  role: AuthUserRole;
 }
 
 export interface AuthUserEnvelope {
   user: AuthUser | null;
 }
 
-export interface MobileTokenExchangeRequest {
+export interface LoginRequest {
+  email: string;
   /** @minLength 1 */
-  code: string;
-  /** @minLength 1 */
-  code_verifier: string;
-  /** @minLength 1 */
-  redirect_uri: string;
-  /** @minLength 1 */
-  state: string;
-  /** @minLength 1 */
-  nonce?: string;
+  password: string;
+}
+
+export type RegisterRequestRole =
+  (typeof RegisterRequestRole)[keyof typeof RegisterRequestRole];
+
+export const RegisterRequestRole = {
+  admin: "admin",
+  staff: "staff",
+} as const;
+
+export interface RegisterRequest {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: RegisterRequestRole;
 }
 
 export interface MobileTokenExchangeSuccess {
@@ -51,20 +69,3 @@ export interface ErrorEnvelope {
  * Bearer session token (used by mobile clients).
  */
 export type AuthorizationSessionHeaderParameter = string;
-
-export type BeginBrowserLoginParams = {
-  /**
-   * Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-   */
-  returnTo?: string;
-};
-
-export type HandleBrowserLoginCallbackParams = {
-  code?: string;
-  state?: string;
-  iss?: string;
-};
-
-export type LogoutBrowserSessionParams = {
-  returnTo?: string;
-};
