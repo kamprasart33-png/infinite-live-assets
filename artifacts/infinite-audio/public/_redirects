@@ -1,0 +1,10 @@
+# Proxy API calls to the Render backend so the browser only ever talks to
+# infiniteaudioarchive.com (same-origin) — this is what makes session
+# cookies from /api/auth/login work correctly. Must come before the SPA
+# fallback rule below.
+/api/*  https://infinite-live-assets.onrender.com/api/:splat  200
+
+# SPA fallback: any other path that isn't a real file (e.g. /login,
+# /dashboard on a hard refresh) falls through to index.html so client-side
+# routing (wouter) can take over.
+/*  /index.html  200
