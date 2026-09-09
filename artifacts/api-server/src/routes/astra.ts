@@ -10,9 +10,9 @@ router.post("/astra/command", async (req, res) => {
       return res.status(400).json({ error: "command is required" });
     }
     const result = await handleAstraCommand(command);
-    res.json(result);
+    return res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Astra command failed" });
+    return res.status(500).json({ error: "Astra command failed" });
   }
 });
 

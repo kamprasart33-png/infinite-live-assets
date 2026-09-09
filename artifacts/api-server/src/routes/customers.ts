@@ -15,9 +15,9 @@ router.get("/customers", async (req, res) => {
       return res.json(data);
     }
     const data = await getAllCustomers(50);
-    res.json(data);
+    return res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch customers" });
+    return res.status(500).json({ error: "Failed to fetch customers" });
   }
 });
 
