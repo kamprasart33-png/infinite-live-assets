@@ -1,5 +1,8 @@
 import { db } from "@workspace/db";
-import { transactions } from "@workspace/db/schema";
+import {
+  transactions,
+  licenses,
+} from "@workspace/db/schema";
 import { sql, desc, eq } from "drizzle-orm";
 
 export async function getRecentTransactions(limit = 10) {
@@ -13,14 +16,18 @@ export async function getRecentTransactions(limit = 10) {
 export async function getActiveLicenses(limit = 50) {
   return db
     .select()
-    .from(transactions)
-    .where(eq(transactions.status, "active"))
-    .orderBy(desc(transactions.createdAt))
+    .from(licenses)
+    .where(eq(licenses.status, "active"))
+    .orderBy(desc(licenses.issuedAt))
     .limit(limit);
 }
 
 export async function getLicensesByType() {
-  const rows = await db.execute<{ license_type: string; count: number; revenue_cents: number }>(sql`
+  const rows = await db.execute<{
+    license_type: string;
+    count: number;
+    revenue_cents: number;
+  }>(sql`
     SELECT
       license_type,
       COUNT(*)::int AS count,
@@ -30,5 +37,6 @@ export async function getLicensesByType() {
     GROUP BY license_type
     ORDER BY revenue_cents DESC
   `);
+
   return rows.rows;
 }

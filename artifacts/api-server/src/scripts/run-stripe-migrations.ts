@@ -13,5 +13,5 @@ if (!databaseUrl) {
 }
 
 console.log("Running stripe-replit-sync migrations…");
-await runMigrations({ databaseUrl, schema: "stripe" });
+await runMigrations({ databaseUrl });
 console.log("✅ Stripe schema migrations complete.");

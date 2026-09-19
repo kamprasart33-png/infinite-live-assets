@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { transactions, tracks, customers } from "@workspace/db/schema";
+import { transactions, tracks, customers, licenses } from "@workspace/db/schema";
 import { sql, gte, and, eq } from "drizzle-orm";
 
 function startOfToday(): Date {
@@ -56,8 +56,8 @@ export async function getDashboardMetrics() {
     // Active licenses
     db
       .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .where(eq(transactions.status, "active"))
+      .from(licenses)
+      .where(eq(licenses.status, "active"))
       .then((r) => Number(r[0]?.count ?? 0)),
   ]);
 
