@@ -15,7 +15,7 @@ import {
   useRecentTransactions, useActiveLicenses, useLicensesByType,
   useAstraCommand,
 } from "@/hooks/use-dashboard-data";
-import { centsToDisplay, timeAgo, type TopTrack, type Transaction, type Customer, type Track } from "@/lib/api";
+import { centsToDisplay, timeAgo, type TopTrack, type Transaction, type Customer, type Track, type License, type RevenueMonth } from "@/lib/api";
 
 // ─── Design tokens ───────────────────────────────────────────────────────────
 
@@ -322,18 +322,18 @@ function LicensesSection() {
               </tr>
             </thead>
             <tbody>
-              {(licenses ?? []).slice(0, 12).map((l: Transaction) => (
+              {(licenses ?? []).slice(0, 12).map((l: License) => (
                 <tr key={l.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
                   <td style={{ padding: "0.85rem 1.25rem", fontWeight: 600 }}>{l.trackTitle ?? "—"}</td>
-                  <td style={{ padding: "0.85rem 1.25rem", color: C.sub }}>{l.customerName ?? "—"}</td>
+                  <td style={{ padding: "0.85rem 1.25rem", color: C.sub }}>{l.customerId}</td>
                   <td style={{ padding: "0.85rem 1.25rem" }}>
                     <span style={{ background: "rgba(6,182,212,0.1)", color: C.cyan, fontSize: "0.72rem", fontWeight: 600, padding: "0.2rem 0.65rem", borderRadius: 9999 }}>{l.licenseType}</span>
                   </td>
-                  <td style={{ padding: "0.85rem 1.25rem", color: C.muted }}>{new Date(l.createdAt).toLocaleDateString()}</td>
-                  <td style={{ padding: "0.85rem 1.25rem", fontWeight: 700, color: C.green }}>{centsToDisplay(l.amountCents)}</td>
+                  <td style={{ padding: "0.85rem 1.25rem", color: C.muted }}>{new Date(l.issuedAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "0.85rem 1.25rem", fontWeight: 700, color: C.green }}>{l.licenseKey}</td>
                   <td style={{ padding: "0.85rem 1.25rem" }}><StatusBadge status={l.status} /></td>
                 </tr>
               ))}
@@ -565,16 +565,69 @@ function renderAstraData(intent: string, data: unknown): React.ReactNode {
   }
 
   // Transaction / license list
-  if ((intent === "active_licenses" || intent === "recent_transactions") && Array.isArray(data)) {
+   // Transaction list
+  if (intent === "recent_transactions" && Array.isArray(data)) {
     return (
       <div style={{ marginTop: "0.75rem" }}>
         {(data as Transaction[]).slice(0, 5).map(tx => (
           <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: "0.82rem" }}>
             <div>
               <div style={{ fontWeight: 600 }}>{tx.trackTitle ?? "—"}</div>
-              <div style={{ fontSize: "0.72rem", color: C.muted }}>{tx.customerName} · {tx.licenseType}</div>
+              <div style={{ fontSize: "0.72rem", color: C.muted }}>
+                {tx.customerName ?? "—"} · {tx.licenseType}
+              </div>
             </div>
-            <span style={{ color: C.green, fontWeight: 700 }}>{centsToDisplay(tx.amountCents)}</span>
+            <span style={{ color: C.green, fontWeight: 700 }}>
+              {centsToDisplay(tx.amountCents)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Active license list
+  if (intent === "active_licenses" && Array.isArray(data)) {
+    return (
+      <div style={{ marginTop: "0.75rem" }}>
+        {(data as License[]).slice(0, 5).map(license => (
+          <div key={license.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: "0.82rem" }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {license.trackTitle ?? "—"}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: C.muted }}>
+                {license.licenseType} · {license.licenseKey}
+              </div>
+            </div>
+            <span style={{ color: C.green, fontWeight: 700 }}>
+              {license.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Revenue history
+  if (intent === "revenue_history" && Array.isArray(data)) {
+    return (
+      <div style={{ marginTop: "0.75rem" }}>
+        {(data as RevenueMonth[]).slice(-6).map(row => (
+          <div
+            key={row.month}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "0.4rem 0",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              fontSize: "0.82rem",
+            }}
+          >
+            <span style={{ color: C.muted }}>{row.month}</span>
+            <span style={{ color: C.cyan, fontWeight: 700 }}>
+              {centsToDisplay(Number(row.revenue))}
+            </span>
           </div>
         ))}
       </div>

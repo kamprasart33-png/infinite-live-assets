@@ -85,6 +85,18 @@ export interface Transaction {
   createdAt: string;
 }
 
+export interface License {
+  id: number;
+  licenseKey: string;
+  orderId: number;
+  customerId: number;
+  trackId: number | null;
+  trackTitle: string | null;
+  licenseType: string;
+  status: string;
+  issuedAt: string;
+}
+
 export interface LicenseByType {
   license_type: string;
   count: number;
@@ -147,7 +159,7 @@ export const api = {
   },
   transactions: {
     recent: (limit = 10) => get<Transaction[]>(`/transactions/recent?limit=${limit}`),
-    activeLicenses: () => get<Transaction[]>("/transactions/active-licenses"),
+    activeLicenses: () => get<License[]>("/transactions/active-licenses"),
     byType: () => get<LicenseByType[]>("/transactions/by-type"),
   },
   astra: {
