@@ -1,6 +1,6 @@
 import { getDashboardMetrics, getRevenueHistory, getDailySales } from "./metrics.service";
 import { getTopSellingTracks } from "./tracks.service";
-import { getActiveLicenses, getRecentTransactions } from "./transactions.service";
+import { getActiveLicenses, getRecentTransactions, getLicensesByType } from "./transactions.service";
 import { getNewestCustomers, getActiveCustomers } from "./customers.service";
 
 export interface AstraCommandResult {
@@ -62,6 +62,19 @@ const HANDLERS: CommandHandler[] = [
     label: "Recent Transactions",
     patterns: [/recent.*transaction/i, /transaction.*recent/i, /latest.*sale/i, /sale.*latest/i, /recent.*sale/i],
     handler: () => getRecentTransactions(10),
+  },
+  {
+    intent: "sales_by_license",
+    label: "Sales by License Type",
+    patterns: [
+      /sales.*license/i,
+      /license.*sales/i,
+      /sales.*license.*type/i,
+      /license.*type/i,
+      /revenue.*license/i,
+      /license.*revenue/i,
+    ],
+    handler: () => getLicensesByType(),
   },
   {
     intent: "newest_customers",
