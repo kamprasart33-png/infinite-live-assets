@@ -16,7 +16,16 @@ router.get("/transactions/recent", async (req, res) => {
       detail: err instanceof Error ? (err as any).cause?.detail : undefined,
       hint: err instanceof Error ? (err as any).cause?.hint : undefined,
     });
-    res.status(500).json({ error: "Failed to fetch transactions" });
+    res.status(500).json({
+      error: "Failed to fetch transactions",
+      debug: {
+        message: err instanceof Error ? err.message : String(err),
+        cause: err instanceof Error ? String((err as any).cause?.message ?? "") : "",
+        code: err instanceof Error ? (err as any).cause?.code : undefined,
+        detail: err instanceof Error ? (err as any).cause?.detail : undefined,
+        hint: err instanceof Error ? (err as any).cause?.hint : undefined,
+      },
+    });
   }
 });
 
