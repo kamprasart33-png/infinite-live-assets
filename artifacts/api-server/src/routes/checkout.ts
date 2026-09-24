@@ -34,6 +34,7 @@ router.post("/checkout/create-session", async (req, res) => {
 
     res.json({ url: session.url });
   } catch (err: any) {
+    console.error("CHECKOUT_CREATE_SESSION_ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
