@@ -18,9 +18,9 @@ router.post("/checkout/create-session", async (req, res) => {
 
   try {
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
-    const baseUrl = domain
-      ? `https://${domain}`
-      : `${req.protocol}://${req.get("host")}`;
+    const baseUrl =
+      process.env.FRONTEND_URL ||
+      (domain ? `https://${domain}` : `${req.protocol}://${req.get("host")}`);
 
     const session = await createCheckoutSession({
       trackId: Number(trackId),
