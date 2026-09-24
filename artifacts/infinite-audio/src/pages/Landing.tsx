@@ -1661,14 +1661,15 @@ function TrackCard({ track, isPlaying, onTogglePlay }: {
           </span>
           <span style={{ color: "var(--cyan-400)", fontWeight: 700 }}>{track.price}</span>
         </div>
-        <LicenseButton />
+        <LicenseButton trackId={track.id} />
       </div>
     </div>
   );
 }
 
-function LicenseButton() {
+function LicenseButton({ trackId }: { trackId: number }) {
   const [hov, setHov] = useState(false);
+  const [, navigate] = useLocation();
   return (
     <button
       style={{
@@ -1680,6 +1681,7 @@ function LicenseButton() {
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      onClick={() => navigate(`/store/track/${trackId}`)}
     >
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={16} height={16}>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
