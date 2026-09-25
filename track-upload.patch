@@ -1,0 +1,644 @@
+From 0bfd8651dbe48c187ba28ba98f97238327cb4651 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 25 Sep 2026 09:35:12 +0500
+Subject: [PATCH] Add admin audio upload flow with private object storage
+
+---
+ AUDIO_UPLOAD_SETUP.md                         |  26 ++
+ artifacts/api-server/package.json             |   2 +
+ artifacts/api-server/src/routes/store.ts      |  14 +-
+ artifacts/api-server/src/routes/tracks.ts     |  62 ++++
+ artifacts/infinite-audio/src/lib/api.ts       |   9 +-
+ .../infinite-audio/src/pages/Dashboard.tsx    |  39 ++-
+ pnpm-lock.yaml                                | 318 ++++++++++++++++++
+ 7 files changed, 467 insertions(+), 3 deletions(-)
+ create mode 100644 AUDIO_UPLOAD_SETUP.md
+
+diff --git a/AUDIO_UPLOAD_SETUP.md b/AUDIO_UPLOAD_SETUP.md
+new file mode 100644
+index 0000000..ec18d52
+--- /dev/null
++++ b/AUDIO_UPLOAD_SETUP.md
+@@ -0,0 +1,26 @@
++# Audio upload setup
++
++The dashboard Add Track form uploads MP3, M4A, or WAV files (maximum 50 MB)
++directly from the browser to a private S3 compatible bucket. The API then
++stores a reference in the existing `tracks.file_url` column. A completed
++purchase receives a short lived signed download URL.
++
++Configure these environment variables on the Render API service:
++
++- `AUDIO_S3_ENDPOINT` — HTTPS S3 compatible endpoint (for R2, the account endpoint)
++- `AUDIO_S3_REGION` — region, or `auto` for R2
++- `AUDIO_S3_BUCKET` — private bucket name
++- `AUDIO_S3_ACCESS_KEY_ID` — key with object read/write access
++- `AUDIO_S3_SECRET_ACCESS_KEY` — corresponding secret
++
++Configure bucket CORS to allow `PUT` from `https://infiniteaudioarchive.com`
++with `Content-Type` as an allowed header. The browser sends the audio directly
++to the bucket; the bucket must not be public. Do not put credentials in Netlify
++or browser environment variables. Until the Render variables and CORS are set,
++the form reports "Audio storage is not configured yet" and does not create
++a track.
++
++After deployment, sign in as admin and test with a small audio file. Confirm
++the track appears in Music Library, then verify a completed purchase can
++download it. An abandoned upload can leave an unreferenced object in the
++bucket; periodically remove unreferenced `tracks/` objects.
+diff --git a/artifacts/api-server/package.json b/artifacts/api-server/package.json
+index 6428b50..1b6ee56 100644
+--- a/artifacts/api-server/package.json
++++ b/artifacts/api-server/package.json
+@@ -10,6 +10,8 @@
+     "typecheck": "tsc -p tsconfig.json --noEmit"
+   },
+   "dependencies": {
++    "@aws-sdk/client-s3": "^3.1139.0",
++    "@aws-sdk/s3-request-presigner": "^3.1139.0",
+     "@workspace/api-zod": "workspace:*",
+     "@workspace/db": "workspace:*",
+     "bcryptjs": "^3.0.2",
+diff --git a/artifacts/api-server/src/routes/store.ts b/artifacts/api-server/src/routes/store.ts
+index f2f1c73..c6d436b 100644
+--- a/artifacts/api-server/src/routes/store.ts
++++ b/artifacts/api-server/src/routes/store.ts
+@@ -4,6 +4,9 @@ import { db } from "@workspace/db";
+ import { orders, tracks } from "@workspace/db/schema";
+ import { and, eq } from "drizzle-orm";
+ import { requireAdmin } from "../middlewares/authMiddleware";
++import { audioClient } from "./tracks";
++import { GetObjectCommand } from "@aws-sdk/client-s3";
++import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+ 
+ const router: IRouter = Router();
+ 
+@@ -74,7 +77,16 @@ router.get("/tracks/:id/download", async (req, res) => {
+ 
+     if (track.fileUrl) {
+       res.setHeader("Cache-Control", "private, no-store");
+-      res.redirect(track.fileUrl);
++      if (track.fileUrl.startsWith("s3:")) {
++        if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
++        const url = await getSignedUrl(audioClient(), new GetObjectCommand({
++          Bucket: process.env.AUDIO_S3_BUCKET, Key: track.fileUrl.slice(3),
++          ResponseContentDisposition: `attachment; filename="track-${track.id}.${track.fileUrl.split(".").pop()}"`,
++        }), { expiresIn: 300 });
++        res.redirect(url);
++      } else {
++        res.redirect(track.fileUrl);
++      }
+     } else {
+       res.status(404).json({
+         message: "Audio file not yet uploaded for this track.",
+diff --git a/artifacts/api-server/src/routes/tracks.ts b/artifacts/api-server/src/routes/tracks.ts
+index 5547ea6..37d2da9 100644
+--- a/artifacts/api-server/src/routes/tracks.ts
++++ b/artifacts/api-server/src/routes/tracks.ts
+@@ -1,7 +1,69 @@
+ import { Router } from "express";
+ import { getAllTracks, getTopSellingTracks } from "../services/tracks.service";
++import { requireAdmin } from "../middlewares/authMiddleware";
++import { db } from "@workspace/db";
++import { tracks } from "@workspace/db/schema";
++import { randomUUID } from "node:crypto";
++import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
++import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+ 
+ const router = Router();
++export function audioClient() {
++  const { AUDIO_S3_ENDPOINT, AUDIO_S3_REGION, AUDIO_S3_ACCESS_KEY_ID, AUDIO_S3_SECRET_ACCESS_KEY } = process.env;
++  if (!AUDIO_S3_ENDPOINT || !AUDIO_S3_ACCESS_KEY_ID || !AUDIO_S3_SECRET_ACCESS_KEY) throw new Error("Audio storage is not configured");
++  return new S3Client({ region: AUDIO_S3_REGION || "auto", endpoint: AUDIO_S3_ENDPOINT,
++    credentials: { accessKeyId: AUDIO_S3_ACCESS_KEY_ID, secretAccessKey: AUDIO_S3_SECRET_ACCESS_KEY } });
++}
++
++// The browser sends the file directly to object storage, avoiding the Netlify
++// proxy and Render request-size limits. Keep this bucket private.
++router.post("/tracks/upload-ticket", requireAdmin, async (req, res) => {
++  const { name, size, type } = req.body ?? {};
++  if (typeof name !== "string" || name.length > 255 || !name ||
++      !Number.isSafeInteger(size) || size < 1 || size > 50 * 1024 * 1024 ||
++      !["audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/wav", "audio/x-wav"].includes(type)) {
++    res.status(400).json({ error: "Choose an MP3, M4A, or WAV file under 50 MB." });
++    return;
++  }
++  const { AUDIO_S3_ENDPOINT, AUDIO_S3_REGION, AUDIO_S3_BUCKET, AUDIO_S3_ACCESS_KEY_ID, AUDIO_S3_SECRET_ACCESS_KEY } = process.env;
++  if (!AUDIO_S3_ENDPOINT || !AUDIO_S3_BUCKET || !AUDIO_S3_ACCESS_KEY_ID || !AUDIO_S3_SECRET_ACCESS_KEY) {
++    res.status(503).json({ error: "Audio storage is not configured yet." });
++    return;
++  }
++  try {
++    const client = audioClient();
++    const key = `tracks/${randomUUID()}${type === "audio/mpeg" ? ".mp3" : type.includes("wav") ? ".wav" : ".m4a"}`;
++    const url = await getSignedUrl(client, new PutObjectCommand({ Bucket: AUDIO_S3_BUCKET, Key: key, ContentType: type }), { expiresIn: 600 });
++    res.json({ url, key });
++  } catch {
++    res.status(500).json({ error: "Could not prepare audio upload." });
++  }
++});
++
++router.post("/tracks", requireAdmin, async (req, res) => {
++  const { title, artist, genre, duration, priceCents, key } = req.body ?? {};
++  if (typeof title !== "string" || !title.trim() || title.length > 255 ||
++      typeof artist !== "string" || !artist.trim() || artist.length > 255 ||
++      typeof genre !== "string" || genre.length > 100 ||
++      typeof duration !== "string" || duration.length > 20 ||
++      !Number.isSafeInteger(priceCents) || priceCents < 0 ||
++      typeof key !== "string" || !/^tracks\/[a-f0-9-]{36}\.(mp3|m4a|wav)$/.test(key)) {
++    res.status(400).json({ error: "Valid track details and uploaded audio are required." });
++    return;
++  }
++  try {
++    if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
++    const object = await audioClient().send(new HeadObjectCommand({ Bucket: process.env.AUDIO_S3_BUCKET, Key: key }));
++    if (!object.ContentType?.startsWith("audio/") || !object.ContentLength || object.ContentLength > 50 * 1024 * 1024) {
++      res.status(400).json({ error: "Uploaded audio file is invalid." });
++      return;
++    }
++    const [track] = await db.insert(tracks).values({ title: title.trim(), artist: artist.trim(), genre: genre.trim(), duration: duration.trim(), priceCents, fileUrl: `s3:${key}` }).returning();
++    res.status(201).json({ id: track.id, title: track.title, audioReady: true });
++  } catch {
++    res.status(500).json({ error: "Could not save track." });
++  }
++});
+ 
+ router.get("/tracks", async (_req, res) => {
+   try {
+diff --git a/artifacts/infinite-audio/src/lib/api.ts b/artifacts/infinite-audio/src/lib/api.ts
+index fd481f1..816fe57 100644
+--- a/artifacts/infinite-audio/src/lib/api.ts
++++ b/artifacts/infinite-audio/src/lib/api.ts
+@@ -14,7 +14,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(body),
+   });
+-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
++  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `POST ${path} failed: ${res.status}`);
+   return res.json() as Promise<T>;
+ }
+ 
+@@ -151,6 +151,13 @@ export const api = {
+   tracks: {
+     all: () => get<Track[]>("/tracks"),
+     topSelling: (limit = 10) => get<TopTrack[]>(`/tracks/top-selling?limit=${limit}`),
++    add: async (file: File, details: { title: string; artist: string; genre: string; duration: string; priceCents: number }) => {
++      const type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
++      const { url, key } = await post<{ url: string; key: string }>("/tracks/upload-ticket", { name: file.name, size: file.size, type });
++      const upload = await fetch(url, { method: "PUT", headers: { "Content-Type": type }, body: file });
++      if (!upload.ok) throw new Error("Audio upload failed. Check storage CORS settings and try again.");
++      return post<Track>("/tracks", { ...details, key });
++    },
+   },
+   customers: {
+     all: () => get<Customer[]>("/customers"),
+diff --git a/artifacts/infinite-audio/src/pages/Dashboard.tsx b/artifacts/infinite-audio/src/pages/Dashboard.tsx
+index 4ab466b..8c3cd55 100644
+--- a/artifacts/infinite-audio/src/pages/Dashboard.tsx
++++ b/artifacts/infinite-audio/src/pages/Dashboard.tsx
+@@ -1,4 +1,6 @@
+ import { useState } from "react";
++import { useQueryClient } from "@tanstack/react-query";
++import { api } from "@/lib/api";
+ import {
+   AreaChart, Area, BarChart, Bar, LineChart, Line,
+   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
+@@ -42,6 +44,8 @@ const chartTooltipStyle = {
+ };
+ 
+ const PIE_COLORS = [C.cyan, C.purple, C.green, C.amber, "#f97316"];
++const addInput: React.CSSProperties = { display: "block", width: "100%", boxSizing: "border-box", marginTop: 5, padding: 10, borderRadius: 8, border: `1px solid ${C.borderHover}`, background: "#0b1019", color: "#fff" };
++const addButton: React.CSSProperties = { padding: "0.65rem 1rem", borderRadius: 8, border: `1px solid ${C.borderHover}`, background: "#1f2937", color: "#fff", cursor: "pointer" };
+ 
+ // ─── Shared primitives ────────────────────────────────────────────────────────
+ 
+@@ -224,6 +228,10 @@ function RevenueSection() {
+ function LibrarySection() {
+   const [filter, setFilter] = useState("All");
+   const [search, setSearch] = useState("");
++  const [adding, setAdding] = useState(false);
++  const [busy, setBusy] = useState(false);
++  const [addError, setAddError] = useState("");
++  const queryClient = useQueryClient();
+   const { data: tracks, isLoading, error, refetch } = useTracks();
+ 
+   const genres = ["All", ...Array.from(new Set((tracks ?? []).map(t => t.genre).filter(Boolean) as string[]))];
+@@ -238,7 +246,7 @@ function LibrarySection() {
+         <h2 style={{ fontSize: "1.4rem", fontWeight: 700 }}>Music Library</h2>
+         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+           <span style={{ fontSize: "0.8rem", color: C.muted }}>{tracks?.length ?? "—"} tracks</span>
+-          <button style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: C.cyan, color: "#000", border: "none", borderRadius: 9999, padding: "0.5rem 1.1rem", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
++          <button onClick={() => { setAddError(""); setAdding(true); }} style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: C.cyan, color: "#000", border: "none", borderRadius: 9999, padding: "0.5rem 1.1rem", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+             <Plus size={15} /> Add Track
+           </button>
+         </div>
+@@ -263,6 +271,35 @@ function LibrarySection() {
+         </div>
+       </div>
+ 
++      {adding && <div role="dialog" aria-modal="true" aria-label="Add Track" style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.8)", display: "grid", placeItems: "center", padding: 16, overflowY: "auto" }}>
++        <form onSubmit={async e => {
++          e.preventDefault();
++          const fields = new FormData(e.currentTarget);
++          const file = fields.get("audio");
++          if (!(file instanceof File) || !file.size) { setAddError("Choose an audio file."); return; }
++          setBusy(true); setAddError("");
++          try {
++            await api.tracks.add(file, { title: String(fields.get("title")), artist: String(fields.get("artist")), genre: String(fields.get("genre")), duration: String(fields.get("duration")), priceCents: Math.round(Number(fields.get("price")) * 100) });
++            await queryClient.invalidateQueries({ queryKey: ["tracks"] });
++            setAdding(false);
++          } catch (err) { setAddError(err instanceof Error ? err.message : "Could not add track."); }
++          finally { setBusy(false); }
++        }} style={card({ width: "min(100%, 430px)", padding: 24, background: "#111827", display: "grid", gap: 12 })}>
++          <h2 style={{ fontSize: 20, fontWeight: 700 }}>Add Track</h2>
++          <label>Song title<input name="title" required maxLength={255} style={addInput} /></label>
++          <label>Artist<input name="artist" required defaultValue="Khmer Smoke" maxLength={255} style={addInput} /></label>
++          <label>Genre<input name="genre" maxLength={100} style={addInput} /></label>
++          <label>Duration (for example 3:45)<input name="duration" maxLength={20} style={addInput} /></label>
++          <label>Price in dollars<input name="price" type="number" min="0" step="0.01" defaultValue="49" required style={addInput} /></label>
++          <label>Audio file (MP3, M4A, WAV; up to 50 MB)<input name="audio" type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" required style={addInput} /></label>
++          {addError && <p role="alert" style={{ color: C.red }}>{addError}</p>}
++          <div style={{ display: "flex", gap: 10 }}>
++            <button type="button" disabled={busy} onClick={() => setAdding(false)} style={addButton}>Cancel</button>
++            <button type="submit" disabled={busy} style={{ ...addButton, background: C.cyan, color: "#000" }}>{busy ? "Uploading…" : "Upload Track"}</button>
++          </div>
++        </form>
++      </div>}
++
+       {error ? <SectionError message="Failed to load tracks" onRetry={refetch} /> : isLoading ? <SectionLoader /> : (
+         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1rem" }}>
+           {filtered.map((t: Track) => (
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 154ae2d..317eeaa 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -176,6 +176,12 @@ importers:
+ 
+   artifacts/api-server:
+     dependencies:
++      '@aws-sdk/client-s3':
++        specifier: ^3.1139.0
++        version: 3.1139.0
++      '@aws-sdk/s3-request-presigner':
++        specifier: ^3.1139.0
++        version: 3.1139.0
+       '@workspace/api-zod':
+         specifier: workspace:*
+         version: link:../../lib/api-zod
+@@ -677,6 +683,82 @@ importers:
+ 
+ packages:
+ 
++  '@aws-sdk/checksums@3.1001.1':
++    resolution: {integrity: sha512-x12Q17KYlJAd3nKf8LV5LV0vt8sh8/6YfQLGPtrGnQf/tW4jqxPGq5GPpuVitpQYM3eUR4XB7CbxZf751NMbLw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/client-s3@3.1139.0':
++    resolution: {integrity: sha512-HwMHlXgJSsQmZhpFLJaovAIBoC2eVBep4wjTaPCV+qySFd4giXCFuDZC/8Btz1KCr4JzEO5AhXPb5FMflqoQig==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/core@3.978.1':
++    resolution: {integrity: sha512-LbY9aGsEiznDWmUc30Nwv3aIX/+dbwTx8KfS0yOC3NPYMO+O91e6jkT1azf34FwjOndq8/Q+RcVVZz5xnerwdg==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-env@3.972.72':
++    resolution: {integrity: sha512-xTKO/FWJPozTIXbozVnVGoNBhaGba8TBcx+KyUjRVeOlXE+dUc7GTR1cLvu0uTdIdmemzaFbqqCshXeZA1fZew==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-http@3.972.74':
++    resolution: {integrity: sha512-u91E/hT8f4d1xy0Jl7VG4nVKJ3lxbrZkoBTeSVoJdWBiSEUMwMS/9+e0H/aJVQV//Lt5wuzP+E69v4aRSsNTmw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-ini@3.973.17':
++    resolution: {integrity: sha512-ged4KXdBkvIC81bLvNHHuQKdKak/VXhQTR1NWYTTqW0474nlmsxy9O/vlgTIohDDWH3xpBdtVMZRyjb+DnocDA==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-login@3.972.79':
++    resolution: {integrity: sha512-L+Z85anONJd8MaiuraO4wRxATCdEejBZ3K3eymzWI5JPXa9sOS9CkIm72PBKqXKX+Z9p9NGMX5AIMXm0LEflgw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-node@3.972.84':
++    resolution: {integrity: sha512-oHt854odINVwzwsh+c5x69j0ajm4DbqqqVJ+O1ECsCIZeMDAbzFpXItaqP7UZstJj/ATdTk/KFSH0LaNAgV+kA==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-process@3.972.72':
++    resolution: {integrity: sha512-rLIp2xbMjX/k9/od7APpqq1ZgXXnV0pOL1Th3ZsL8Wu0TRtBsDTVS8iPqcfRFcHakFxPvR04OSTv2ka2qOb/2A==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-sso@3.973.16':
++    resolution: {integrity: sha512-IGihaJfFZYacJJr/odqILCoK7W/mvrZ7cuK7ECn3sAu4vLC6u0V8bS7mCGbdugJ8Aum2tnvqmx0F2MRFp2rn9g==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/credential-provider-web-identity@3.972.78':
++    resolution: {integrity: sha512-/y9WvNtlcPBGLR0qc1a+9J/xtYZfVczvLUOuXaVWylzttH7ewsxwHtjmiJSolNrVSDorIxHGHMU61CbonRkmwA==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/middleware-sdk-s3@3.972.77':
++    resolution: {integrity: sha512-E7W2UOeUoc+lg3uIfR/dM7ZwusHwhBQrKMnlkRv4EXRR+C0YtV1pg25xC7GdZIhXH+NAMgZPCbE7o5to2cjFiw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/nested-clients@3.997.46':
++    resolution: {integrity: sha512-oRxtBcka/JGHGs9l9p9IVajGoTP8vTPmoAzdHGy4Qcy9P5vPnDf6nhIeM/COQNY9k/OahImTRaLkHftoXvfcmQ==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/s3-request-presigner@3.1139.0':
++    resolution: {integrity: sha512-crOQr6GrVZC6Ov6jzCAkeQZN7IiStG2yJ2QOse1rFsBgqGCWXllFnVLf7n97yuBJMbtoKeWMfrbFnWKKqhSwtw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/signature-v4-multi-region@3.996.47':
++    resolution: {integrity: sha512-Zk08macMvQTHzQJCLJVkOlviVoqwYMrpXv4lmLN7b7sAbiMoOK7Go0NYdR5UeF+MW8LIbRmwrNy9u/5VvX1U5g==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/token-providers@3.1138.0':
++    resolution: {integrity: sha512-GpyAr0DD63YOEmYFM6Df+gJuIgC92MMTiBK4FTKfxii5MJ9ge20epR7LyroulscYlG89J+ZB2ivFDPjvfQhzdw==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/types@3.974.6':
++    resolution: {integrity: sha512-v/clNZzZnDxGyvpHMOGpJKVXFAExJzUNAAjaWGdcx8QAcXLGwTaOkw33p5SHAi0YAioK32xB3hWwOekRVfmfKg==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws-sdk/xml-builder@3.972.41':
++    resolution: {integrity: sha512-ctjVSyCMegrWfXlx6VqzSBFI6UqmQ5ZlnfMhdLIiWmhoH8UAQxSCP5N3OpG7X3k4LnS7ou74C4mt20+bfTW2aQ==}
++    engines: {node: '>=20.0.0'}
++
++  '@aws/lambda-invoke-store@0.3.0':
++    resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
++    engines: {node: '>=18.0.0'}
++
+   '@babel/code-frame@7.29.0':
+     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
+     engines: {node: '>=6.9.0'}
+@@ -1593,6 +1675,30 @@ packages:
+     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
+     engines: {node: '>=18'}
+ 
++  '@smithy/core@3.35.0':
++    resolution: {integrity: sha512-zRMhfkByhT2snNdr1si24vJitU6Cr9ix2MikUfWmkAgp4jrNP0GcKSP5YvwQ+TlI8AZXER5QOGJn3JsVtSD9/A==}
++    engines: {node: '>=18.0.0'}
++
++  '@smithy/credential-provider-imds@4.5.2':
++    resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
++    engines: {node: '>=18.0.0'}
++
++  '@smithy/fetch-http-handler@5.8.0':
++    resolution: {integrity: sha512-ycSJu3tFAQ4v04CBB0agqFMVsSQ1iG3yw+SpgxRqKfaURpQD4CZ8Wn0zPMmSnOuTpTh65Vz+EA0rMrw089wvkA==}
++    engines: {node: '>=18.0.0'}
++
++  '@smithy/node-http-handler@4.12.1':
++    resolution: {integrity: sha512-ThMkboGeONWXAelq9FvGsuJC4rOi+qyC4/zhUF58xYpxUg5sQKx2VXZYJmtNjr4dSuBJ1HeJXETQILCz3wOHvw==}
++    engines: {node: '>=18.0.0'}
++
++  '@smithy/signature-v4@5.7.3':
++    resolution: {integrity: sha512-7ImGm+FkHRLcBaRttIAMZ6bzJZWb2cJGoYjq46F2UjycujWzrL9GEN9h4w7eQyXJYnltrUhxbbieBAIRrdqpow==}
++    engines: {node: '>=18.0.0'}
++
++  '@smithy/types@4.19.0':
++    resolution: {integrity: sha512-r7jh49VJxGerfAcTQA6gXcKc+98zOp/tqRwzYjgOE+iSQsP6cEU1hq2QzbuipmP68QtYdY9wKEhiCQZIzHgZ4Q==}
++    engines: {node: '>=18.0.0'}
++
+   '@tabby_ai/hijri-converter@1.0.5':
+     resolution: {integrity: sha512-r5bClKrcIusDoo049dSL8CawnHR6mRdDwhlQuIgZRNty68q0x8k3Lf1BtPAMxRf/GgnHBnIO4ujd3+GQdLWzxQ==}
+     engines: {node: '>=16.0.0'}
+@@ -1805,6 +1911,9 @@ packages:
+     resolution: {integrity: sha512-oP5VkATKlNwcgvxi0vM0p/D3n2C3EReYVX+DNYs5TjZFn/oQt2j+4sVJtSMr18pdRr8wjTcBl6LoV+FUwzPmNA==}
+     engines: {node: '>=18'}
+ 
++  bowser@2.14.1:
++    resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
++
+   brace-expansion@2.0.2:
+     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
+ 
+@@ -3248,6 +3357,180 @@ packages:
+ 
+ snapshots:
+ 
++  '@aws-sdk/checksums@3.1001.1':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/client-s3@3.1139.0':
++    dependencies:
++      '@aws-sdk/checksums': 3.1001.1
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/credential-provider-node': 3.972.84
++      '@aws-sdk/middleware-sdk-s3': 3.972.77
++      '@aws-sdk/signature-v4-multi-region': 3.996.47
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/fetch-http-handler': 5.8.0
++      '@smithy/node-http-handler': 4.12.1
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/core@3.978.1':
++    dependencies:
++      '@aws-sdk/types': 3.974.6
++      '@aws-sdk/xml-builder': 3.972.41
++      '@aws/lambda-invoke-store': 0.3.0
++      '@smithy/core': 3.35.0
++      '@smithy/signature-v4': 5.7.3
++      '@smithy/types': 4.19.0
++      bowser: 2.14.1
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-env@3.972.72':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-http@3.972.74':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/fetch-http-handler': 5.8.0
++      '@smithy/node-http-handler': 4.12.1
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-ini@3.973.17':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/credential-provider-env': 3.972.72
++      '@aws-sdk/credential-provider-http': 3.972.74
++      '@aws-sdk/credential-provider-login': 3.972.79
++      '@aws-sdk/credential-provider-process': 3.972.72
++      '@aws-sdk/credential-provider-sso': 3.973.16
++      '@aws-sdk/credential-provider-web-identity': 3.972.78
++      '@aws-sdk/nested-clients': 3.997.46
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/credential-provider-imds': 4.5.2
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-login@3.972.79':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/nested-clients': 3.997.46
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-node@3.972.84':
++    dependencies:
++      '@aws-sdk/credential-provider-env': 3.972.72
++      '@aws-sdk/credential-provider-http': 3.972.74
++      '@aws-sdk/credential-provider-ini': 3.973.17
++      '@aws-sdk/credential-provider-process': 3.972.72
++      '@aws-sdk/credential-provider-sso': 3.973.16
++      '@aws-sdk/credential-provider-web-identity': 3.972.78
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/credential-provider-imds': 4.5.2
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-process@3.972.72':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-sso@3.973.16':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/nested-clients': 3.997.46
++      '@aws-sdk/token-providers': 3.1138.0
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/credential-provider-web-identity@3.972.78':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/nested-clients': 3.997.46
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/middleware-sdk-s3@3.972.77':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/signature-v4-multi-region': 3.996.47
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/nested-clients@3.997.46':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/signature-v4-multi-region': 3.996.47
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/fetch-http-handler': 5.8.0
++      '@smithy/node-http-handler': 4.12.1
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/s3-request-presigner@3.1139.0':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/signature-v4-multi-region': 3.996.47
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/signature-v4-multi-region@3.996.47':
++    dependencies:
++      '@aws-sdk/types': 3.974.6
++      '@smithy/signature-v4': 5.7.3
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/token-providers@3.1138.0':
++    dependencies:
++      '@aws-sdk/core': 3.978.1
++      '@aws-sdk/nested-clients': 3.997.46
++      '@aws-sdk/types': 3.974.6
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/types@3.974.6':
++    dependencies:
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws-sdk/xml-builder@3.972.41':
++    dependencies:
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@aws/lambda-invoke-store@0.3.0': {}
++
+   '@babel/code-frame@7.29.0':
+     dependencies:
+       '@babel/helper-validator-identifier': 7.28.5
+@@ -4316,6 +4599,39 @@ snapshots:
+ 
+   '@sindresorhus/merge-streams@4.0.0': {}
+ 
++  '@smithy/core@3.35.0':
++    dependencies:
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@smithy/credential-provider-imds@4.5.2':
++    dependencies:
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@smithy/fetch-http-handler@5.8.0':
++    dependencies:
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@smithy/node-http-handler@4.12.1':
++    dependencies:
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@smithy/signature-v4@5.7.3':
++    dependencies:
++      '@smithy/core': 3.35.0
++      '@smithy/types': 4.19.0
++      tslib: 2.8.1
++
++  '@smithy/types@4.19.0':
++    dependencies:
++      tslib: 2.8.1
++
+   '@tabby_ai/hijri-converter@1.0.5': {}
+ 
+   '@tailwindcss/node@4.2.1':
+@@ -4542,6 +4858,8 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+ 
++  bowser@2.14.1: {}
++
+   brace-expansion@2.0.2:
+     dependencies:
+       balanced-match: 1.0.2
+-- 
+2.51.1
+
