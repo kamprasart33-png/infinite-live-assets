@@ -3,6 +3,9 @@ import {
   createCheckoutSession,
   fulfillOrder,
 } from "../services/checkout.service";
+import { db } from "@workspace/db";
+import { tracks } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -17,6 +20,12 @@ router.post("/checkout/create-session", async (req, res) => {
   }
 
   try {
+    const [track] = await db.select().from(tracks).where(eq(tracks.id, Number(trackId)));
+    if (!track) { res.status(404).json({ error: "Track not found" }); return; }
+    if (!track.fileUrl) {
+      res.status(409).json({ error: "Audio download is not ready for this track. Please check back later." });
+      return;
+    }
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
     const baseUrl =
       process.env.FRONTEND_URL ||
@@ -24,7 +33,7 @@ router.post("/checkout/create-session", async (req, res) => {
 
     const session = await createCheckoutSession({
       trackId: Number(trackId),
-      trackTitle: String(trackTitle),
+      trackTitle: track.title,
       licenseType: String(licenseType),
       priceId: String(priceId),
       customerName: String(customerName),

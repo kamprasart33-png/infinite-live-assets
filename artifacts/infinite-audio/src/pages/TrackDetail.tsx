@@ -203,19 +203,22 @@ export default function TrackDetail({ trackId }: Props) {
                     {error}
                   </div>
                 )}
+                {track && !track.audioReady && (
+                  <p style={{ color: "#f7a600", fontSize: 13, margin: 0 }}>Audio download is being prepared. Purchasing is unavailable for this track.</p>
+                )}
 
                 <button
                   type="submit"
-                  disabled={!selectedPrice || !customerName || !customerEmail || loading}
+                  disabled={!track?.audioReady || !selectedPrice || !customerName || !customerEmail || loading}
                   style={{
-                    background: selectedPrice && customerName && customerEmail && !loading ? "#00d4aa" : "#1c1c1c",
-                    color: selectedPrice && customerName && customerEmail && !loading ? "#000" : "#444",
+                    background: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#00d4aa" : "#1c1c1c",
+                    color: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#000" : "#444",
                     border: "none",
                     borderRadius: 12,
                     padding: "14px",
                     fontSize: 15,
                     fontWeight: 700,
-                    cursor: selectedPrice && customerName && customerEmail && !loading ? "pointer" : "not-allowed",
+                    cursor: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "pointer" : "not-allowed",
                     transition: "all 0.2s",
                     marginTop: 4,
                   }}

@@ -123,7 +123,7 @@ audio files is strictly prohibited.
                 {/* Action buttons */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <a
-                    href={`/api/tracks/${order.trackId}/download`}
+                    href={`/api/tracks/${order.trackId}/download?session_id=${encodeURIComponent(sessionId ?? "")}`}
                     style={{
                       display: "flex",
                       alignItems: "center",

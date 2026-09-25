@@ -3,7 +3,8 @@ import { tracks, transactions } from "@workspace/db/schema";
 import { sql, desc, eq } from "drizzle-orm";
 
 export async function getAllTracks() {
-  return db.select().from(tracks).orderBy(desc(tracks.createdAt));
+  const rows = await db.select().from(tracks).orderBy(desc(tracks.createdAt));
+  return rows.map(({ fileUrl, ...track }) => ({ ...track, audioReady: Boolean(fileUrl) }));
 }
 
 export async function getTopSellingTracks(limit = 10) {

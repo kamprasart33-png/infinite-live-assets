@@ -49,7 +49,7 @@ export interface Track {
   duration: string | null;
   priceCents: number;
   plays: number;
-  fileUrl: string | null;
+  audioReady: boolean;
   createdAt: string;
 }
 
