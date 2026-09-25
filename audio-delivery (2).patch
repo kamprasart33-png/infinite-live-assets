@@ -1,0 +1,209 @@
+From 30da01e2173c248c0a7791e48d5c295b54d3be3b Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 25 Sep 2026 06:10:26 +0500
+Subject: [PATCH] Gate purchased audio delivery on paid order and available
+ file
+
+---
+ artifacts/api-server/src/routes/checkout.ts   | 11 ++++-
+ artifacts/api-server/src/routes/store.ts      | 45 ++++++++++++++++---
+ .../api-server/src/services/tracks.service.ts |  3 +-
+ artifacts/infinite-audio/src/lib/api.ts       |  2 +-
+ .../infinite-audio/src/pages/Success.tsx      |  2 +-
+ .../infinite-audio/src/pages/TrackDetail.tsx  | 11 +++--
+ 6 files changed, 60 insertions(+), 14 deletions(-)
+
+diff --git a/artifacts/api-server/src/routes/checkout.ts b/artifacts/api-server/src/routes/checkout.ts
+index 8315a47..0a4a21f 100644
+--- a/artifacts/api-server/src/routes/checkout.ts
++++ b/artifacts/api-server/src/routes/checkout.ts
+@@ -3,6 +3,9 @@ import {
+   createCheckoutSession,
+   fulfillOrder,
+ } from "../services/checkout.service";
++import { db } from "@workspace/db";
++import { tracks } from "@workspace/db/schema";
++import { eq } from "drizzle-orm";
+ 
+ const router: IRouter = Router();
+ 
+@@ -17,6 +20,12 @@ router.post("/checkout/create-session", async (req, res) => {
+   }
+ 
+   try {
++    const [track] = await db.select().from(tracks).where(eq(tracks.id, Number(trackId)));
++    if (!track) { res.status(404).json({ error: "Track not found" }); return; }
++    if (!track.fileUrl) {
++      res.status(409).json({ error: "Audio download is not ready for this track. Please check back later." });
++      return;
++    }
+     const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
+     const baseUrl =
+       process.env.FRONTEND_URL ||
+@@ -24,7 +33,7 @@ router.post("/checkout/create-session", async (req, res) => {
+ 
+     const session = await createCheckoutSession({
+       trackId: Number(trackId),
+-      trackTitle: String(trackTitle),
++      trackTitle: track.title,
+       licenseType: String(licenseType),
+       priceId: String(priceId),
+       customerName: String(customerName),
+diff --git a/artifacts/api-server/src/routes/store.ts b/artifacts/api-server/src/routes/store.ts
+index fb9e1f1..f2f1c73 100644
+--- a/artifacts/api-server/src/routes/store.ts
++++ b/artifacts/api-server/src/routes/store.ts
+@@ -1,8 +1,9 @@
+ import { Router, type IRouter } from "express";
+ import { storage } from "../storage";
+ import { db } from "@workspace/db";
+-import { tracks } from "@workspace/db/schema";
+-import { eq } from "drizzle-orm";
++import { orders, tracks } from "@workspace/db/schema";
++import { and, eq } from "drizzle-orm";
++import { requireAdmin } from "../middlewares/authMiddleware";
+ 
+ const router: IRouter = Router();
+ 
+@@ -10,7 +11,7 @@ const router: IRouter = Router();
+ router.get("/store/tracks", async (_req, res) => {
+   try {
+     const rows = await db.select().from(tracks);
+-    res.json(rows);
++    res.json(rows.map(({ fileUrl, ...track }) => ({ ...track, audioReady: Boolean(fileUrl) })));
+   } catch (err: any) {
+     res.status(500).json({ error: err.message });
+   }
+@@ -27,13 +28,44 @@ router.get("/store/license-prices", async (_req, res) => {
+   }
+ });
+ 
+-// GET /api/tracks/:id/download
++// Attach the original audio file after uploading it to durable storage.
++router.put("/tracks/:id/audio", requireAdmin, async (req, res) => {
++  const id = Number(req.params.id);
++  const fileUrl = req.body?.fileUrl;
++  if (!Number.isSafeInteger(id) || id < 1 || typeof fileUrl !== "string") {
++    res.status(400).json({ error: "Valid track ID and fileUrl required" });
++    return;
++  }
++  try {
++    const url = new URL(fileUrl);
++    if (url.protocol !== "https:" || url.username || url.password) throw new Error("Invalid URL");
++    if (fileUrl.length > 500) throw new Error("URL too long");
++  } catch {
++    res.status(400).json({ error: "Provide an HTTPS audio file URL (500 characters maximum)" });
++    return;
++  }
++  const [track] = await db.update(tracks).set({ fileUrl }).where(eq(tracks.id, id)).returning();
++  if (!track) { res.status(404).json({ error: "Track not found" }); return; }
++  res.json({ id: track.id, title: track.title, audioReady: true });
++});
++
++// GET /api/tracks/:id/download?session_id=... — only the paid session grants access.
+ router.get("/tracks/:id/download", async (req, res) => {
+   try {
++    const id = Number(req.params.id);
++    const sessionId = req.query.session_id;
++    if (!Number.isSafeInteger(id) || id < 1 || typeof sessionId !== "string" || !sessionId) {
++      res.status(400).json({ error: "Track ID and purchase session required" });
++      return;
++    }
++    const [order] = await db.select({ id: orders.id }).from(orders).where(and(
++      eq(orders.stripeSessionId, sessionId), eq(orders.trackId, id), eq(orders.status, "completed"),
++    ));
++    if (!order) { res.status(403).json({ error: "No paid order for this track" }); return; }
+     const [track] = await db
+       .select()
+       .from(tracks)
+-      .where(eq(tracks.id, parseInt(req.params.id)));
++      .where(eq(tracks.id, id));
+ 
+     if (!track) {
+       res.status(404).json({ error: "Track not found" });
+@@ -41,9 +73,10 @@ router.get("/tracks/:id/download", async (req, res) => {
+     }
+ 
+     if (track.fileUrl) {
++      res.setHeader("Cache-Control", "private, no-store");
+       res.redirect(track.fileUrl);
+     } else {
+-      res.status(200).json({
++      res.status(404).json({
+         message: "Audio file not yet uploaded for this track.",
+         track: track.title,
+       });
+diff --git a/artifacts/api-server/src/services/tracks.service.ts b/artifacts/api-server/src/services/tracks.service.ts
+index b74034c..6bb0851 100644
+--- a/artifacts/api-server/src/services/tracks.service.ts
++++ b/artifacts/api-server/src/services/tracks.service.ts
+@@ -3,7 +3,8 @@ import { tracks, transactions } from "@workspace/db/schema";
+ import { sql, desc, eq } from "drizzle-orm";
+ 
+ export async function getAllTracks() {
+-  return db.select().from(tracks).orderBy(desc(tracks.createdAt));
++  const rows = await db.select().from(tracks).orderBy(desc(tracks.createdAt));
++  return rows.map(({ fileUrl, ...track }) => ({ ...track, audioReady: Boolean(fileUrl) }));
+ }
+ 
+ export async function getTopSellingTracks(limit = 10) {
+diff --git a/artifacts/infinite-audio/src/lib/api.ts b/artifacts/infinite-audio/src/lib/api.ts
+index b355250..fd481f1 100644
+--- a/artifacts/infinite-audio/src/lib/api.ts
++++ b/artifacts/infinite-audio/src/lib/api.ts
+@@ -49,7 +49,7 @@ export interface Track {
+   duration: string | null;
+   priceCents: number;
+   plays: number;
+-  fileUrl: string | null;
++  audioReady: boolean;
+   createdAt: string;
+ }
+ 
+diff --git a/artifacts/infinite-audio/src/pages/Success.tsx b/artifacts/infinite-audio/src/pages/Success.tsx
+index afa5357..70f87ac 100644
+--- a/artifacts/infinite-audio/src/pages/Success.tsx
++++ b/artifacts/infinite-audio/src/pages/Success.tsx
+@@ -123,7 +123,7 @@ audio files is strictly prohibited.
+                 {/* Action buttons */}
+                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                   <a
+-                    href={`/api/tracks/${order.trackId}/download`}
++                    href={`/api/tracks/${order.trackId}/download?session_id=${encodeURIComponent(sessionId ?? "")}`}
+                     style={{
+                       display: "flex",
+                       alignItems: "center",
+diff --git a/artifacts/infinite-audio/src/pages/TrackDetail.tsx b/artifacts/infinite-audio/src/pages/TrackDetail.tsx
+index ea65ccd..ba90859 100644
+--- a/artifacts/infinite-audio/src/pages/TrackDetail.tsx
++++ b/artifacts/infinite-audio/src/pages/TrackDetail.tsx
+@@ -203,19 +203,22 @@ export default function TrackDetail({ trackId }: Props) {
+                     {error}
+                   </div>
+                 )}
++                {track && !track.audioReady && (
++                  <p style={{ color: "#f7a600", fontSize: 13, margin: 0 }}>Audio download is being prepared. Purchasing is unavailable for this track.</p>
++                )}
+ 
+                 <button
+                   type="submit"
+-                  disabled={!selectedPrice || !customerName || !customerEmail || loading}
++                  disabled={!track?.audioReady || !selectedPrice || !customerName || !customerEmail || loading}
+                   style={{
+-                    background: selectedPrice && customerName && customerEmail && !loading ? "#00d4aa" : "#1c1c1c",
+-                    color: selectedPrice && customerName && customerEmail && !loading ? "#000" : "#444",
++                    background: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#00d4aa" : "#1c1c1c",
++                    color: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#000" : "#444",
+                     border: "none",
+                     borderRadius: 12,
+                     padding: "14px",
+                     fontSize: 15,
+                     fontWeight: 700,
+-                    cursor: selectedPrice && customerName && customerEmail && !loading ? "pointer" : "not-allowed",
++                    cursor: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "pointer" : "not-allowed",
+                     transition: "all 0.2s",
+                     marginTop: 4,
+                   }}
+-- 
+2.51.1
+
