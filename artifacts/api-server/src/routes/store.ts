@@ -4,6 +4,9 @@ import { db } from "@workspace/db";
 import { orders, tracks } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/authMiddleware";
+import { audioClient } from "./tracks";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const router: IRouter = Router();
 
@@ -74,7 +77,16 @@ router.get("/tracks/:id/download", async (req, res) => {
 
     if (track.fileUrl) {
       res.setHeader("Cache-Control", "private, no-store");
-      res.redirect(track.fileUrl);
+      if (track.fileUrl.startsWith("s3:")) {
+        if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
+        const url = await getSignedUrl(audioClient(), new GetObjectCommand({
+          Bucket: process.env.AUDIO_S3_BUCKET, Key: track.fileUrl.slice(3),
+          ResponseContentDisposition: `attachment; filename="track-${track.id}.${track.fileUrl.split(".").pop()}"`,
+        }), { expiresIn: 300 });
+        res.redirect(url);
+      } else {
+        res.redirect(track.fileUrl);
+      }
     } else {
       res.status(404).json({
         message: "Audio file not yet uploaded for this track.",

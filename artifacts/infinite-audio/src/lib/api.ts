@@ -14,7 +14,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `POST ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
 
@@ -151,6 +151,13 @@ export const api = {
   tracks: {
     all: () => get<Track[]>("/tracks"),
     topSelling: (limit = 10) => get<TopTrack[]>(`/tracks/top-selling?limit=${limit}`),
+    add: async (file: File, details: { title: string; artist: string; genre: string; duration: string; priceCents: number }) => {
+      const type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
+      const { url, key } = await post<{ url: string; key: string }>("/tracks/upload-ticket", { name: file.name, size: file.size, type });
+      const upload = await fetch(url, { method: "PUT", headers: { "Content-Type": type }, body: file });
+      if (!upload.ok) throw new Error("Audio upload failed. Check storage CORS settings and try again.");
+      return post<Track>("/tracks", { ...details, key });
+    },
   },
   customers: {
     all: () => get<Customer[]>("/customers"),
