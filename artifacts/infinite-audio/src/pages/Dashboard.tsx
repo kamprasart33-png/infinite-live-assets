@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
@@ -42,6 +44,8 @@ const chartTooltipStyle = {
 };
 
 const PIE_COLORS = [C.cyan, C.purple, C.green, C.amber, "#f97316"];
+const addInput: React.CSSProperties = { display: "block", width: "100%", boxSizing: "border-box", marginTop: 5, padding: 10, borderRadius: 8, border: `1px solid ${C.borderHover}`, background: "#0b1019", color: "#fff" };
+const addButton: React.CSSProperties = { padding: "0.65rem 1rem", borderRadius: 8, border: `1px solid ${C.borderHover}`, background: "#1f2937", color: "#fff", cursor: "pointer" };
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -224,6 +228,10 @@ function RevenueSection() {
 function LibrarySection() {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [addError, setAddError] = useState("");
+  const queryClient = useQueryClient();
   const { data: tracks, isLoading, error, refetch } = useTracks();
 
   const genres = ["All", ...Array.from(new Set((tracks ?? []).map(t => t.genre).filter(Boolean) as string[]))];
@@ -238,7 +246,7 @@ function LibrarySection() {
         <h2 style={{ fontSize: "1.4rem", fontWeight: 700 }}>Music Library</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span style={{ fontSize: "0.8rem", color: C.muted }}>{tracks?.length ?? "—"} tracks</span>
-          <button style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: C.cyan, color: "#000", border: "none", borderRadius: 9999, padding: "0.5rem 1.1rem", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+          <button onClick={() => { setAddError(""); setAdding(true); }} style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: C.cyan, color: "#000", border: "none", borderRadius: 9999, padding: "0.5rem 1.1rem", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
             <Plus size={15} /> Add Track
           </button>
         </div>
@@ -262,6 +270,35 @@ function LibrarySection() {
           ))}
         </div>
       </div>
+
+      {adding && <div role="dialog" aria-modal="true" aria-label="Add Track" style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.8)", display: "grid", placeItems: "center", padding: 16, overflowY: "auto" }}>
+        <form onSubmit={async e => {
+          e.preventDefault();
+          const fields = new FormData(e.currentTarget);
+          const file = fields.get("audio");
+          if (!(file instanceof File) || !file.size) { setAddError("Choose an audio file."); return; }
+          setBusy(true); setAddError("");
+          try {
+            await api.tracks.add(file, { title: String(fields.get("title")), artist: String(fields.get("artist")), genre: String(fields.get("genre")), duration: String(fields.get("duration")), priceCents: Math.round(Number(fields.get("price")) * 100) });
+            await queryClient.invalidateQueries({ queryKey: ["tracks"] });
+            setAdding(false);
+          } catch (err) { setAddError(err instanceof Error ? err.message : "Could not add track."); }
+          finally { setBusy(false); }
+        }} style={card({ width: "min(100%, 430px)", padding: 24, background: "#111827", display: "grid", gap: 12 })}>
+          <h2 style={{ fontSize: 20, fontWeight: 700 }}>Add Track</h2>
+          <label>Song title<input name="title" required maxLength={255} style={addInput} /></label>
+          <label>Artist<input name="artist" required defaultValue="Khmer Smoke" maxLength={255} style={addInput} /></label>
+          <label>Genre<input name="genre" maxLength={100} style={addInput} /></label>
+          <label>Duration (for example 3:45)<input name="duration" maxLength={20} style={addInput} /></label>
+          <label>Price in dollars<input name="price" type="number" min="0" step="0.01" defaultValue="49" required style={addInput} /></label>
+          <label>Audio file (MP3, M4A, WAV; up to 50 MB)<input name="audio" type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" required style={addInput} /></label>
+          {addError && <p role="alert" style={{ color: C.red }}>{addError}</p>}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" disabled={busy} onClick={() => setAdding(false)} style={addButton}>Cancel</button>
+            <button type="submit" disabled={busy} style={{ ...addButton, background: C.cyan, color: "#000" }}>{busy ? "Uploading…" : "Upload Track"}</button>
+          </div>
+        </form>
+      </div>}
 
       {error ? <SectionError message="Failed to load tracks" onRetry={refetch} /> : isLoading ? <SectionLoader /> : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1rem" }}>
