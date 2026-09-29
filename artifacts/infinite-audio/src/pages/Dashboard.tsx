@@ -233,6 +233,8 @@ function LibrarySection() {
   const [addError, setAddError] = useState("");
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [previewError, setPreviewError] = useState<number | null>(null);
+  const [attachingId, setAttachingId] = useState<number | null>(null);
+  const [attachError, setAttachError] = useState<{ id: number; message: string } | null>(null);
   const queryClient = useQueryClient();
   const { data: tracks, isLoading, error, refetch } = useTracks();
 
@@ -328,6 +330,26 @@ function LibrarySection() {
               </div>
               {previewId === t.id && <audio controls autoPlay preload="none" src={`/api/tracks/${t.id}/preview`} onError={() => setPreviewError(t.id)} style={{ width: "100%", marginTop: 12 }} />}
               {previewError === t.id && <p role="alert" style={{ color: C.red, fontSize: "0.75rem", marginTop: 8 }}>Could not play this audio. Check the upload and try again.</p>}
+              {!t.audioReady && <label style={{ display: "inline-block", marginTop: 12, padding: "0.4rem 0.7rem", border: `1px solid ${C.borderHover}`, borderRadius: 8, color: C.cyan, fontSize: "0.75rem", cursor: attachingId === null ? "pointer" : "wait" }}>
+                {attachingId === t.id ? "Uploading…" : "Attach Audio"}
+                <input type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" disabled={attachingId !== null} style={{ display: "none" }} onChange={async e => {
+                  const input = e.currentTarget;
+                  const file = input.files?.[0];
+                  input.value = "";
+                  if (!file) return;
+                  setAttachingId(t.id); setAttachError(null);
+                  try {
+                    await api.tracks.attach(t.id, file);
+                    await Promise.all([
+                      queryClient.invalidateQueries({ queryKey: ["tracks"] }),
+                      queryClient.invalidateQueries({ queryKey: ["store", "tracks"] }),
+                    ]);
+                  } catch (err) {
+                    setAttachError({ id: t.id, message: err instanceof Error ? err.message : "Could not attach audio." });
+                  } finally { setAttachingId(null); }
+                }} />
+              </label>}
+              {attachError?.id === t.id && <p role="alert" style={{ color: C.red, fontSize: "0.75rem", marginTop: 8 }}>{attachError.message}</p>}
             </div>
           ))}
         </div>

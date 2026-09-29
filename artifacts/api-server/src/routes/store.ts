@@ -2,10 +2,10 @@ import { Router, type IRouter } from "express";
 import { storage } from "../storage";
 import { db } from "@workspace/db";
 import { orders, tracks } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/authMiddleware";
 import { audioClient } from "./tracks";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const router: IRouter = Router();
@@ -62,11 +62,37 @@ router.get("/store/license-prices", async (_req, res) => {
 // Attach the original audio file after uploading it to durable storage.
 router.put("/tracks/:id/audio", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
+  const key = req.body?.key;
   const fileUrl = req.body?.fileUrl;
-  if (!Number.isSafeInteger(id) || id < 1 || typeof fileUrl !== "string") {
-    res.status(400).json({ error: "Valid track ID and fileUrl required" });
+  if (!Number.isSafeInteger(id) || id < 1) {
+    res.status(400).json({ error: "Valid track ID required" });
     return;
   }
+  if (key !== undefined) {
+    if (typeof key !== "string" || !/^tracks\/[a-f0-9-]{36}\.(mp3|m4a|wav)$/.test(key)) {
+      res.status(400).json({ error: "Valid uploaded audio key required" });
+      return;
+    }
+    try {
+      if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
+      const [existing] = await db.select({ fileUrl: tracks.fileUrl }).from(tracks).where(eq(tracks.id, id));
+      if (!existing) { res.status(404).json({ error: "Track not found" }); return; }
+      if (existing.fileUrl) { res.status(409).json({ error: "This track already has audio" }); return; }
+      const object = await audioClient().send(new HeadObjectCommand({ Bucket: process.env.AUDIO_S3_BUCKET, Key: key }));
+      if (!object.ContentType?.startsWith("audio/") || !object.ContentLength || object.ContentLength > 50 * 1024 * 1024) {
+        res.status(400).json({ error: "Uploaded audio file is invalid" });
+        return;
+      }
+      const [track] = await db.update(tracks).set({ fileUrl: `s3:${key}` })
+        .where(and(eq(tracks.id, id), isNull(tracks.fileUrl))).returning();
+      if (!track) { res.status(409).json({ error: "This track already has audio" }); return; }
+      res.json({ id: track.id, title: track.title, audioReady: true });
+    } catch {
+      res.status(500).json({ error: "Could not attach audio to track" });
+    }
+    return;
+  }
+  if (typeof fileUrl !== "string") { res.status(400).json({ error: "Valid fileUrl required" }); return; }
   try {
     const url = new URL(fileUrl);
     if (url.protocol !== "https:" || url.username || url.password) throw new Error("Invalid URL");

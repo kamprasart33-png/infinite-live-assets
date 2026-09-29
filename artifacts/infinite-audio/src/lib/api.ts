@@ -18,6 +18,14 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function uploadAudio(file: File): Promise<string> {
+  const type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
+  const { url, key } = await post<{ url: string; key: string }>("/tracks/upload-ticket", { name: file.name, size: file.size, type });
+  const upload = await fetch(url, { method: "PUT", headers: { "Content-Type": type }, body: file });
+  if (!upload.ok) throw new Error("Audio upload failed. Check storage settings and try again.");
+  return key;
+}
+
 // ── Response types ────────────────────────────────────────────────────────
 
 export interface DashboardMetrics {
@@ -152,11 +160,16 @@ export const api = {
     all: () => get<Track[]>("/tracks"),
     topSelling: (limit = 10) => get<TopTrack[]>(`/tracks/top-selling?limit=${limit}`),
     add: async (file: File, details: { title: string; artist: string; genre: string; duration: string; priceCents: number }) => {
-      const type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
-      const { url, key } = await post<{ url: string; key: string }>("/tracks/upload-ticket", { name: file.name, size: file.size, type });
-      const upload = await fetch(url, { method: "PUT", headers: { "Content-Type": type }, body: file });
-      if (!upload.ok) throw new Error("Audio upload failed. Check storage CORS settings and try again.");
+      const key = await uploadAudio(file);
       return post<Track>("/tracks", { ...details, key });
+    },
+    attach: async (id: number, file: File) => {
+      const key = await uploadAudio(file);
+      const res = await fetch(`${BASE}/tracks/${id}/audio`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `Attach audio failed: ${res.status}`);
+      return res.json() as Promise<Track>;
     },
   },
   customers: {
