@@ -52,6 +52,34 @@ router.put("/tracks/:id/audio", requireAdmin, async (req, res) => {
   res.json({ id: track.id, title: track.title, audioReady: true });
 });
 
+// Admin-only playback of the original audio from private storage.
+router.get("/tracks/:id/preview", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    res.status(400).json({ error: "Valid track ID required" });
+    return;
+  }
+  try {
+    const [track] = await db.select({ fileUrl: tracks.fileUrl }).from(tracks).where(eq(tracks.id, id));
+    if (!track?.fileUrl) {
+      res.status(404).json({ error: "Audio file not available" });
+      return;
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    if (track.fileUrl.startsWith("s3:")) {
+      if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
+      const url = await getSignedUrl(audioClient(), new GetObjectCommand({
+        Bucket: process.env.AUDIO_S3_BUCKET, Key: track.fileUrl.slice(3),
+      }), { expiresIn: 600 });
+      res.redirect(url);
+    } else {
+      res.redirect(track.fileUrl);
+    }
+  } catch {
+    res.status(500).json({ error: "Could not preview audio" });
+  }
+});
+
 // GET /api/tracks/:id/download?session_id=... — only the paid session grants access.
 router.get("/tracks/:id/download", async (req, res) => {
   try {

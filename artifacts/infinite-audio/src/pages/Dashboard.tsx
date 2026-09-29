@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   BarChart2, Music, FileText, Users, DollarSign, TrendingUp,
-  Zap, LogOut, Bell, Search, Plus, Play, ShieldCheck, ChevronRight,
+  Zap, LogOut, Bell, Search, Plus, Play, Pause, ShieldCheck, ChevronRight,
   Send, ArrowUpRight, RefreshCw, AlertCircle, Loader2,
 } from "lucide-react";
 import {
@@ -231,6 +231,8 @@ function LibrarySection() {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [addError, setAddError] = useState("");
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [previewError, setPreviewError] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { data: tracks, isLoading, error, refetch } = useTracks();
 
@@ -313,8 +315,8 @@ function LibrarySection() {
                   <div style={{ fontWeight: 700, marginBottom: "0.2rem" }}>{t.title}</div>
                   <div style={{ fontSize: "0.72rem", color: C.muted }}>{t.artist} · {t.duration ?? "—"}</div>
                 </div>
-                <button style={{ width: 32, height: 32, borderRadius: "50%", background: `rgba(6,182,212,0.15)`, border: `1px solid rgba(6,182,212,0.3)`, color: C.cyan, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <Play size={13} fill={C.cyan} />
+                <button type="button" disabled={!t.audioReady} title={t.audioReady ? (previewId === t.id ? "Stop preview" : "Play preview") : "Audio not uploaded"} aria-label={previewId === t.id ? `Stop ${t.title}` : `Play ${t.title}`} onClick={() => { setPreviewError(null); setPreviewId(previewId === t.id ? null : t.id); }} style={{ width: 32, height: 32, borderRadius: "50%", background: `rgba(6,182,212,0.15)`, border: `1px solid rgba(6,182,212,0.3)`, color: C.cyan, display: "flex", alignItems: "center", justifyContent: "center", cursor: t.audioReady ? "pointer" : "not-allowed", opacity: t.audioReady ? 1 : 0.4 }}>
+                  {previewId === t.id ? <Pause size={13} fill={C.cyan} /> : <Play size={13} fill={C.cyan} />}
                 </button>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -324,6 +326,8 @@ function LibrarySection() {
                   <button style={{ background: `rgba(6,182,212,0.1)`, border: `1px solid rgba(6,182,212,0.3)`, color: C.cyan, borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>License</button>
                 </div>
               </div>
+              {previewId === t.id && <audio controls autoPlay preload="none" src={`/api/tracks/${t.id}/preview`} onError={() => setPreviewError(t.id)} style={{ width: "100%", marginTop: 12 }} />}
+              {previewError === t.id && <p role="alert" style={{ color: C.red, fontSize: "0.75rem", marginTop: 8 }}>Could not play this audio. Check the upload and try again.</p>}
             </div>
           ))}
         </div>
