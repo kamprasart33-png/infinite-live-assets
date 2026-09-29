@@ -207,6 +207,19 @@ export default function TrackDetail({ trackId }: Props) {
                   <p style={{ color: "#f7a600", fontSize: 13, margin: 0 }}>Audio download is being prepared. Purchasing is unavailable for this track.</p>
                 )}
 
+                <details id="license-terms" style={{ border: "1px solid #333", borderRadius: 10, padding: 14, color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>
+                  <summary style={{ cursor: "pointer", color: "#00d4aa", fontWeight: 600 }}>
+                    Read License Terms
+                  </summary>
+                  <p style={{ marginBottom: 0 }}>
+                    This license grants the licensee a non-exclusive,
+                    non-transferable right to synchronise the above
+                    track in productions permitted under the chosen
+                    license tier. Resale or redistribution of the
+                    audio files is strictly prohibited.
+                  </p>
+                </details>
+
                 <button
                   type="submit"
                   disabled={!track?.audioReady || !selectedPrice || !customerName || !customerEmail || loading}
