@@ -6,15 +6,19 @@ import {
 import { db } from "@workspace/db";
 import { tracks } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { storage } from "../storage";
 
 const router: IRouter = Router();
 
 // POST /api/checkout/create-session
 router.post("/checkout/create-session", async (req, res) => {
-  const { trackId, trackTitle, licenseType, priceId, customerName, customerEmail } =
+  const { trackId, priceId, customerName, customerEmail } =
     req.body;
 
-  if (!trackId || !priceId || !customerName || !customerEmail || !licenseType) {
+  if (!Number.isSafeInteger(Number(trackId)) || Number(trackId) < 1 ||
+      typeof priceId !== "string" || !priceId ||
+      typeof customerName !== "string" || !customerName.trim() ||
+      typeof customerEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
@@ -26,6 +30,14 @@ router.post("/checkout/create-session", async (req, res) => {
       res.status(409).json({ error: "Audio download is not ready for this track. Please check back later." });
       return;
     }
+    const prices = await storage.getLicensePrices();
+    const selectedPrice = prices.find((price) => price.price_id === priceId);
+    if (!selectedPrice || selectedPrice.currency.toLowerCase() !== "usd" ||
+        !selectedPrice.unit_amount || selectedPrice.unit_amount < 1) {
+      res.status(400).json({ error: "Choose an available license price" });
+      return;
+    }
+    const licenseType = selectedPrice.product_metadata?.license_type ?? selectedPrice.product_name;
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
     const baseUrl =
       process.env.FRONTEND_URL ||
@@ -34,10 +46,10 @@ router.post("/checkout/create-session", async (req, res) => {
     const session = await createCheckoutSession({
       trackId: Number(trackId),
       trackTitle: track.title,
-      licenseType: String(licenseType),
-      priceId: String(priceId),
-      customerName: String(customerName),
-      customerEmail: String(customerEmail),
+      licenseType,
+      priceId: selectedPrice.price_id,
+      customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(),
       baseUrl,
     });
 

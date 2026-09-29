@@ -14,7 +14,7 @@ const router: IRouter = Router();
 router.get("/store/tracks", async (_req, res) => {
   try {
     const rows = await db.select().from(tracks);
-    res.json(rows.map(({ fileUrl, ...track }) => ({ ...track, audioReady: Boolean(fileUrl) })));
+    res.json(rows.filter((track) => Boolean(track.fileUrl)).map(({ fileUrl, ...track }) => ({ ...track, audioReady: true })));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
