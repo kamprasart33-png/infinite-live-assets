@@ -82,7 +82,7 @@ audio files is strictly prohibited.
                 ✓
               </div>
               <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-1px" }}>Payment Successful!</h1>
-              <p style={{ color: "#555", margin: 0 }}>Your license is ready. Check your inbox for a confirmation email.</p>
+              <p style={{ color: "#555", margin: 0 }}>Your license is ready. Download both files below and keep them with your purchase records.</p>
             </div>
 
             {/* Invoice card */}
