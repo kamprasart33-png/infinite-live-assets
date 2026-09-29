@@ -20,6 +20,34 @@ router.get("/store/tracks", async (_req, res) => {
   }
 });
 
+// Public full-song playback for tracks with uploaded audio.
+router.get("/store/tracks/:id/stream", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    res.status(400).json({ error: "Valid track ID required" });
+    return;
+  }
+  try {
+    const [track] = await db.select({ fileUrl: tracks.fileUrl }).from(tracks).where(eq(tracks.id, id));
+    if (!track?.fileUrl) {
+      res.status(404).json({ error: "Audio file not available" });
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store");
+    if (track.fileUrl.startsWith("s3:")) {
+      if (!process.env.AUDIO_S3_BUCKET) throw new Error("Audio storage is not configured");
+      const url = await getSignedUrl(audioClient(), new GetObjectCommand({
+        Bucket: process.env.AUDIO_S3_BUCKET, Key: track.fileUrl.slice(3),
+      }), { expiresIn: 3600 });
+      res.redirect(url);
+    } else {
+      res.redirect(track.fileUrl);
+    }
+  } catch {
+    res.status(500).json({ error: "Could not play audio" });
+  }
+});
+
 // GET /api/store/license-prices — Stripe license products + prices
 router.get("/store/license-prices", async (_req, res) => {
   try {

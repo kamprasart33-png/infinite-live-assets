@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
 import { centsToDisplay } from "@/lib/api";
@@ -12,6 +12,7 @@ type FeaturedTrack = {
   duration: string;
   genre: string;
   price: string;
+  audioReady: boolean;
 };
 
 const genreBlurb: Record<string, string> = {
@@ -309,13 +310,15 @@ function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
 
 export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { onSignIn: () => void; isSignedIn?: boolean; onSignOut?: () => void }) {
   const [playingId, setPlayingId] = useState<number | null>(null);
+  const [playError, setPlayError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
   const [, navigate] = useLocation();
 
   const { data: storeTracks = [] } = useStoreTracks();
   const tracks = [...storeTracks]
-    .sort((a, b) => (b.plays ?? 0) - (a.plays ?? 0))
+    .sort((a, b) => Number(b.audioReady) - Number(a.audioReady) || (b.plays ?? 0) - (a.plays ?? 0))
     .slice(0, 6)
     .map((t) => ({
       id: t.id,
@@ -325,6 +328,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
       duration: t.duration ?? "",
       genre: t.genre ?? "",
       price: centsToDisplay(t.priceCents),
+      audioReady: t.audioReady,
     }));
 
   const handleSignIn = () => {
@@ -338,7 +342,20 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
   }, []);
 
   const togglePlay = (id: number) => {
-    setPlayingId(prev => (prev === id ? null : id));
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playingId === id) {
+      audio.pause();
+      setPlayingId(null);
+      return;
+    }
+    setPlayError(null);
+    audio.src = `/api/store/tracks/${id}/stream`;
+    setPlayingId(id);
+    void audio.play().catch(() => {
+      setPlayingId(null);
+      setPlayError("This track could not be played. Please try another uploaded song.");
+    });
   };
 
   const links = isSignedIn ? signedInLinks : publicLinks;
@@ -757,6 +774,8 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
           </a>
         </div>
 
+        {playError && <p role="alert" style={{ maxWidth: 1280, margin: "0 auto 1rem", color: "#ef4444" }}>{playError}</p>}
+        <audio ref={audioRef} controls onEnded={() => setPlayingId(null)} onError={() => { setPlayingId(null); setPlayError("This track could not be played. Please try another uploaded song."); }} style={{ display: playingId === null ? "none" : "block", width: "min(100%, 480px)", maxWidth: 1280, margin: "0 auto 1rem" }} />
         <div style={{
           maxWidth: 1280, margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem"
@@ -1640,12 +1659,15 @@ function TrackCard({ track, isPlaying, onTogglePlay }: {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
           <button
             onClick={onTogglePlay}
+            disabled={!track.audioReady}
+            title={track.audioReady ? (isPlaying ? "Pause song" : "Play full song") : "Audio not uploaded yet"}
+            aria-label={track.audioReady ? (isPlaying ? `Pause ${track.title}` : `Play ${track.title}`) : `${track.title} audio not available`}
             style={{
               width: 48, height: 48, borderRadius: "50%",
               background: isPlaying ? "var(--cyan-500)" : "rgba(6,182,212,0.2)",
               border: "none", color: isPlaying ? "#000" : "var(--cyan-400)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", transition: "all 0.2s"
+              cursor: track.audioReady ? "pointer" : "not-allowed", opacity: track.audioReady ? 1 : 0.4, transition: "all 0.2s"
             }}
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
