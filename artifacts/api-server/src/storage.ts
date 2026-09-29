@@ -13,6 +13,7 @@ export interface LicensePrice {
 let _cachedPrices: LicensePrice[] | null = null;
 let _cacheTs = 0;
 const CACHE_TTL = 5 * 60_000; // 5 minutes
+const LICENSE_TYPES = new Set(["Podcast", "YouTube", "Commercial", "Film", "Enterprise"]);
 
 export class Storage {
   async getLicensePrices(): Promise<LicensePrice[]> {
@@ -30,6 +31,8 @@ export class Storage {
 
     const pricesByProduct = new Map<string, (typeof prices.data)[0]>();
     for (const p of prices.data) {
+      if (p.type !== "one_time" || p.currency.toLowerCase() !== "usd" ||
+          !p.unit_amount || p.unit_amount < 1) continue;
       const productId = typeof p.product === "string" ? p.product : p.product.id;
       // Keep the first (lowest-id) price per product
       if (!pricesByProduct.has(productId)) {
@@ -38,6 +41,7 @@ export class Storage {
     }
 
     const result: LicensePrice[] = products.data
+      .filter((prod) => LICENSE_TYPES.has(prod.metadata.license_type))
       .map((prod) => {
         const price = pricesByProduct.get(prod.id);
         if (!price) return null;
