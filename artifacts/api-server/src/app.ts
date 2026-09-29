@@ -6,8 +6,40 @@ import { WebhookHandlers } from "./webhookHandlers";
 import { authMiddleware } from "./middlewares/authMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { getUncachableStripeClient } from "./stripeClient";
+import { fulfillOrder } from "./services/checkout.service";
 
 const app: Express = express();
+
+// Separate signed endpoint for order fulfillment. Stripe retries non-2xx
+// responses, while fulfillOrder is idempotent for repeated event delivery.
+app.post(
+  "/api/checkout/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const secret = process.env.STRIPE_CHECKOUT_WEBHOOK_SECRET;
+    const signature = req.headers["stripe-signature"];
+    if (!secret || typeof signature !== "string" || !Buffer.isBuffer(req.body)) {
+      res.status(400).json({ error: "Webhook configuration or signature missing" });
+      return;
+    }
+    try {
+      const stripe = await getUncachableStripeClient();
+      const event = stripe.webhooks.constructEvent(req.body, signature, secret);
+      if (event.type === "checkout.session.completed" ||
+          event.type === "checkout.session.async_payment_succeeded") {
+        const session = event.data.object;
+        if (session.payment_status === "paid" && session.metadata?.track_id) {
+          await fulfillOrder(session.id);
+        }
+      }
+      res.status(200).json({ received: true });
+    } catch (err) {
+      logger.error({ err }, "Checkout fulfillment webhook error");
+      res.status(400).json({ error: "Webhook processing failed" });
+    }
+  },
+);
 
 // ── Stripe webhook MUST come before express.json() ────────────────────────
 app.post(

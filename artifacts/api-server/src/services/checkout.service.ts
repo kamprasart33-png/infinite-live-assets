@@ -37,6 +37,9 @@ export async function createCheckoutSession(params: CreateSessionParams) {
     line_items: [{ price: priceId, quantity: 1 }],
     mode: "payment",
     customer_email: customerEmail,
+    custom_text: {
+      submit: { message: `License for: ${trackTitle.slice(0, 180)}` },
+    },
     success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/store/track/${trackId}`,
     metadata: {
