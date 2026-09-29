@@ -319,7 +319,6 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
   const { data: storeTracks = [] } = useStoreTracks();
   const tracks = [...storeTracks]
     .sort((a, b) => Number(b.audioReady) - Number(a.audioReady) || (b.plays ?? 0) - (a.plays ?? 0))
-    .slice(0, 6)
     .map((t) => ({
       id: t.id,
       title: t.title,
