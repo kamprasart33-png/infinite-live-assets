@@ -12,6 +12,7 @@ export function audioClient() {
   const { AUDIO_S3_ENDPOINT, AUDIO_S3_REGION, AUDIO_S3_ACCESS_KEY_ID, AUDIO_S3_SECRET_ACCESS_KEY } = process.env;
   if (!AUDIO_S3_ENDPOINT || !AUDIO_S3_ACCESS_KEY_ID || !AUDIO_S3_SECRET_ACCESS_KEY) throw new Error("Audio storage is not configured");
   return new S3Client({ region: AUDIO_S3_REGION || "auto", endpoint: AUDIO_S3_ENDPOINT,
+    requestChecksumCalculation: "WHEN_REQUIRED",
     credentials: { accessKeyId: AUDIO_S3_ACCESS_KEY_ID, secretAccessKey: AUDIO_S3_SECRET_ACCESS_KEY } });
 }
 
