@@ -52,18 +52,6 @@ const HANDLERS: CommandHandler[] = [
     handler: () => getTopSellingTracks(10),
   },
   {
-    intent: "active_licenses",
-    label: "Active Licenses",
-    patterns: [/active.*licen/i, /licen.*active/i, /show.*licen/i, /list.*licen/i, /my licen/i, /all licen/i],
-    handler: () => getActiveLicenses(20),
-  },
-  {
-    intent: "recent_transactions",
-    label: "Recent Transactions",
-    patterns: [/recent.*transaction/i, /transaction.*recent/i, /latest.*sale/i, /sale.*latest/i, /recent.*sale/i],
-    handler: () => getRecentTransactions(10),
-  },
-  {
     intent: "sales_by_license",
     label: "Sales by License Type",
     patterns: [
@@ -75,6 +63,18 @@ const HANDLERS: CommandHandler[] = [
       /license.*revenue/i,
     ],
     handler: () => getLicensesByType(),
+  },
+  {
+    intent: "active_licenses",
+    label: "Active Licenses",
+    patterns: [/active.*licen/i, /licen.*active/i, /show.*licen/i, /list.*licen/i, /my licen/i, /all licen/i],
+    handler: () => getActiveLicenses(20),
+  },
+  {
+    intent: "recent_transactions",
+    label: "Recent Transactions",
+    patterns: [/recent.*transaction/i, /transaction.*recent/i, /latest.*sale/i, /sale.*latest/i, /recent.*sale/i],
+    handler: () => getRecentTransactions(10),
   },
   {
     intent: "newest_customers",
