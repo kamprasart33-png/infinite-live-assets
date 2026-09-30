@@ -584,6 +584,7 @@ function AnalyticsSection() {
 
 interface AstraMessage {
   role: "user" | "astra";
+  intent?: string;
   text?: string;
   label?: string;
   data?: unknown;
@@ -642,6 +643,39 @@ function renderAstraData(intent: string, data: unknown): React.ReactNode {
             </div>
             <span style={{ color: C.green, fontWeight: 700 }}>
               {centsToDisplay(tx.amountCents)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+
+  // Sales totals by license type
+  if (intent === "sales_by_license" && Array.isArray(data)) {
+    const rows = data as {
+      license_type: string;
+      count: number;
+      revenue_cents: number;
+    }[];
+    return (
+      <div style={{ marginTop: "0.75rem" }}>
+        {rows.length === 0 ? (
+          <p>No sales recorded.</p>
+        ) : rows.map(row => (
+          <div key={row.license_type} style={{
+            display: "flex", justifyContent: "space-between",
+            gap: "1rem", padding: "0.4rem 0",
+            borderBottom: "1px solid rgba(255,255,255,0.05)"
+          }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{row.license_type}</div>
+              <div style={{ fontSize: "0.72rem", color: C.muted }}>
+                {row.count} transactions
+              </div>
+            </div>
+            <span style={{ color: C.green, fontWeight: 700 }}>
+              {centsToDisplay(Number(row.revenue_cents))}
             </span>
           </div>
         ))}
@@ -753,7 +787,7 @@ function AstraSection() {
     setMessages(prev => [...prev, { role: "user", text: command }]);
     try {
       const result = await astra.mutateAsync(command);
-      setMessages(prev => [...prev, { role: "astra", label: result.label, data: result.data, text: undefined }]);
+      setMessages(prev => [...prev, { role: "astra", intent: result.intent, label: result.label, data: result.data, text: undefined }]);
     } catch {
       setMessages(prev => [...prev, { role: "astra", error: "Astra failed to respond. Check the API connection." }]);
     }
@@ -810,22 +844,7 @@ function AstraSection() {
                     <Zap size={13} color={C.cyan} fill={C.cyan} />
                     <span style={{ fontSize: "0.78rem", fontWeight: 700, color: C.cyan }}>{m.label}</span>
                   </div>
-                  {renderAstraData(
-                    messages.slice(0, i).filter(x => x.role === "user").slice(-1)[0]?.text
-                      ? (() => {
-                          const cmd = messages.slice(0, i).filter(x => x.role === "user").slice(-1)[0]!.text!;
-                          // re-derive intent label from data
-                          return (m.label ?? "").toLowerCase().includes("revenue") ? "today_revenue"
-                            : (m.label ?? "").toLowerCase().includes("track") ? "top_tracks"
-                            : (m.label ?? "").toLowerCase().includes("licen") ? "active_licenses"
-                            : (m.label ?? "").toLowerCase().includes("customer") ? "newest_customers"
-                            : (m.label ?? "").toLowerCase().includes("transaction") ? "recent_transactions"
-                            : (m.label ?? "").toLowerCase().includes("metric") || (m.label ?? "").toLowerCase().includes("dashboard") ? "dashboard_metrics"
-                            : "unknown";
-                        })()
-                      : "unknown",
-                    m.data
-                  )}
+                  {renderAstraData(m.intent ?? "unknown", m.data)}
                 </div>
               )}
             </div>
