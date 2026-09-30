@@ -108,10 +108,10 @@ const publicLinks: NavLink[] = [
 
 const signedInLinks: NavLink[] = [
   { label: "Library", href: "#tracks" },
-  { label: "Sales", href: "#dashboard" },
+  { label: "Sales", href: "/dashboard" },
   { label: "Licensing", href: "#pricing" },
-  { label: "Analytics", href: "#dashboard" },
-  { label: "Astra", href: "#dashboard", highlight: true },
+  { label: "Analytics", href: "/dashboard" },
+  { label: "Astra", href: "/dashboard", highlight: true },
 ];
 
 function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
@@ -248,7 +248,7 @@ function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
           )}
 
           {/* CTA */}
-          <a href="#dashboard" style={{
+          <a href={isSignedIn ? "/dashboard" : "/login"} style={{
             display: "block", textAlign: "center",
             background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
             color: "#fff", fontWeight: 700, fontSize: "0.85rem",
