@@ -8,6 +8,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { getUncachableStripeClient } from "./stripeClient";
 import { fulfillOrder } from "./services/checkout.service";
+import { sendPurchaseEmail } from "./services/purchase-email.service";
 
 const app: Express = express();
 
@@ -30,7 +31,8 @@ app.post(
           event.type === "checkout.session.async_payment_succeeded") {
         const session = event.data.object;
         if (session.payment_status === "paid" && session.metadata?.track_id) {
-          await fulfillOrder(session.id);
+          const order = await fulfillOrder(session.id);
+          await sendPurchaseEmail(order.id);
         }
       }
       res.status(200).json({ received: true });

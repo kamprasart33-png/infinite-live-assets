@@ -22,6 +22,7 @@ export const orders = pgTable("orders", {
   amountCents: integer("amount_cents").notNull(),
   status: varchar("status", { length: 50 }).notNull().default("pending"),
   invoiceNumber: varchar("invoice_number", { length: 50 }),
+  emailSentAt: timestamp("email_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
