@@ -85,11 +85,11 @@ export default function TrackDetail({ trackId }: Props) {
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px 80px" }}>
         {/* Track header */}
-        <div style={{ background: "#111", border: "1px solid #1c1c1c", borderRadius: 20, padding: "32px", marginBottom: 32, display: "flex", gap: 24, alignItems: "center" }}>
+        <div className="track-checkout-header">
           <div style={{ width: 80, height: 80, borderRadius: 16, background: "linear-gradient(135deg,#00d4aa22,#7c6af722)", border: "1px solid #222", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, flexShrink: 0 }}>
             🎵
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: "1 1 180px", minWidth: 0, overflowWrap: "anywhere" }}>
             {track?.genre && (
               <div style={{ fontSize: 11, color: "#00d4aa", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>{track.genre}</div>
             )}
@@ -104,7 +104,7 @@ export default function TrackDetail({ trackId }: Props) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
+        <div className="track-checkout-grid">
           {/* License picker */}
           <div>
             <h2 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 700 }}>1. Choose a License</h2>
@@ -158,7 +158,7 @@ export default function TrackDetail({ trackId }: Props) {
           </div>
 
           {/* Customer info + CTA */}
-          <div style={{ position: "sticky", top: 24 }}>
+          <div className="track-checkout-form">
             <div style={{ background: "#111", border: "1px solid #1c1c1c", borderRadius: 20, padding: 24 }}>
               <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700 }}>2. Your Details</h2>
               <form onSubmit={handleCheckout} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
