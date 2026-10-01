@@ -54,8 +54,7 @@ router.get("/store/license-prices", async (_req, res) => {
     const rows = await storage.getLicensePrices();
     res.json(rows);
   } catch {
-    // Return empty list if stripe schema not ready yet
-    res.json([]);
+    res.status(503).json({ error: "License options are temporarily unavailable" });
   }
 });
 

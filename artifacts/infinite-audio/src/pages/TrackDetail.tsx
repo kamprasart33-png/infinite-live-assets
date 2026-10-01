@@ -19,8 +19,10 @@ const LICENSE_INFO: Record<string, { icon: string; desc: string; color: string }
 
 export default function TrackDetail({ trackId }: Props) {
   const [, navigate] = useLocation();
-  const { data: tracks = [] } = useStoreTracks();
-  const { data: prices = [], isLoading: pricesLoading } = useLicensePrices();
+  const tracksQuery = useStoreTracks();
+  const { data: tracks = [] } = tracksQuery;
+  const pricesQuery = useLicensePrices();
+  const { data: prices = [], isLoading: pricesLoading } = pricesQuery;
 
   const track = tracks.find((t) => t.id === trackId);
 
@@ -37,9 +39,20 @@ export default function TrackDetail({ trackId }: Props) {
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
+  const canCheckout = Boolean(
+    track?.audioReady &&
+    !tracksQuery.isError &&
+    !pricesQuery.isError &&
+    selectedPrice &&
+    prices.some((price) => price.price_id === selectedPrice.price_id) &&
+    customerName.trim() &&
+    customerEmail.trim() &&
+    !loading
+  );
+
   async function handleCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPrice || !track) return;
+    if (!canCheckout || !selectedPrice || !track) return;
     setLoading(true);
     setError(null);
     try {
@@ -58,12 +71,32 @@ export default function TrackDetail({ trackId }: Props) {
     }
   }
 
-  if (!track && tracks.length > 0) {
+  if (!track) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-          <h2>Track not found</h2>
+          <h2 aria-live="polite">
+            {tracksQuery.isLoading
+              ? "Loading track…"
+              : tracksQuery.isError
+                ? "Unable to load this track"
+                : "Track not found"}
+          </h2>
+          {tracksQuery.isError && (
+            <>
+              <p role="alert" style={{ color: "#aaa", marginTop: 12 }}>
+                Please try again to load the track.
+              </p>
+              <button
+                onClick={() => void tracksQuery.refetch()}
+                disabled={tracksQuery.isFetching}
+                style={{ background: "#00d4aa", color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginTop: 16, marginRight: 12 }}
+              >
+                {tracksQuery.isFetching ? "Retrying…" : "Try Again"}
+              </button>
+            </>
+          )}
           <button onClick={() => navigate("/store")} style={{ background: "#00d4aa", color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginTop: 16 }}>
             Browse All Tracks
           </button>
@@ -111,10 +144,24 @@ export default function TrackDetail({ trackId }: Props) {
 
             {pricesLoading ? (
               <div style={{ color: "#555", padding: "40px 0", textAlign: "center" }}>Loading license options…</div>
-            ) : sortedPrices.length === 0 ? (
+            ) : pricesQuery.isError || sortedPrices.length === 0 ? (
               <div style={{ background: "#111", border: "1px solid #1c1c1c", borderRadius: 12, padding: 24, color: "#666", textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-                <p style={{ margin: 0 }}>Stripe products not yet seeded. Run the seed-products script to populate license options.</p>
+                <p role={pricesQuery.isError ? "alert" : "status"} style={{ margin: 0, color: "#bbb" }}>
+                  {pricesQuery.isError
+                    ? "Unable to load license options. Please try again."
+                    : "No license options are currently available for purchase."}
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedPrice(null);
+                    void pricesQuery.refetch();
+                  }}
+                  disabled={pricesQuery.isFetching}
+                  style={{ background: "#00d4aa", color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginTop: 16 }}
+                >
+                  {pricesQuery.isFetching ? "Retrying…" : "Try Again"}
+                </button>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -222,16 +269,16 @@ export default function TrackDetail({ trackId }: Props) {
 
                 <button
                   type="submit"
-                  disabled={!track?.audioReady || !selectedPrice || !customerName || !customerEmail || loading}
+                  disabled={!canCheckout}
                   style={{
-                    background: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#00d4aa" : "#1c1c1c",
-                    color: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "#000" : "#444",
+                    background: canCheckout ? "#00d4aa" : "#1c1c1c",
+                    color: canCheckout ? "#000" : "#444",
                     border: "none",
                     borderRadius: 12,
                     padding: "14px",
                     fontSize: 15,
                     fontWeight: 700,
-                    cursor: track?.audioReady && selectedPrice && customerName && customerEmail && !loading ? "pointer" : "not-allowed",
+                    cursor: canCheckout ? "pointer" : "not-allowed",
                     transition: "all 0.2s",
                     marginTop: 4,
                   }}
