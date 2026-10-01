@@ -1325,7 +1325,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
       </section>
 
       {/* Final CTA */}
-      <section id="contact" style={{ textAlign: "center", padding: "6rem 2rem", position: "relative" }}>
+      <section style={{ textAlign: "center", padding: "6rem 2rem", position: "relative" }}>
         <h2 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: "1rem" }}>
           Ready to Elevate Your Content?
         </h2>
@@ -1362,6 +1362,29 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
             Contact Sales
           </a>
         </div>
+      </section>
+
+      <section id="contact" style={{
+        textAlign: "center", padding: "4rem 2rem",
+        scrollMarginTop: 100,
+        borderTop: "1px solid rgba(255,255,255,0.1)",
+      }}>
+        <h2 style={{ fontSize: "2rem", fontWeight: 700 }}>
+          Contact Infinite Audio Archive
+        </h2>
+        <p style={{ color: "#9ca3af", margin: "1rem auto", maxWidth: 600 }}>
+          For licensing questions or purchase support, email us.
+          For an existing purchase, include your order or license number.
+        </p>
+        <a href="mailto:contact@infiniteaudioarchive.com" style={{
+          color: "var(--cyan-400)", fontSize: "1.1rem",
+          fontWeight: 600, overflowWrap: "anywhere",
+        }}>
+          contact@infiniteaudioarchive.com
+        </a>
+        <p style={{ color: "#9ca3af", fontSize: "0.875rem" }}>
+          You can also copy this address into your email app.
+        </p>
       </section>
 
       {/* Footer */}
