@@ -109,7 +109,7 @@ export default function TrackDetail({ trackId }: Props) {
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid #1a1a1a", padding: "0 24px", display: "flex", alignItems: "center", gap: 16, height: 64 }}>
-        <button onClick={() => navigate("/store")} style={{ background: "transparent", border: "none", color: "#555", cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <button onClick={() => navigate("/store")} style={{ background: "transparent", border: "none", color: "#b3b3b3", cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,#00d4aa,#7c6af7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🎵</div>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Infinite Audio Archive</span>
@@ -129,11 +129,11 @@ export default function TrackDetail({ trackId }: Props) {
             <h1 style={{ margin: "0 0 4px", fontSize: "clamp(20px,4vw,32px)", fontWeight: 800, letterSpacing: "-1px" }}>
               {track?.title ?? "Loading…"}
             </h1>
-            <p style={{ margin: 0, color: "#555", fontSize: 14 }}>{track?.artist ?? ""}</p>
+            <p style={{ margin: 0, color: "#b3b3b3", fontSize: 14 }}>{track?.artist ?? ""}</p>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            {track?.duration && <div style={{ fontSize: 13, color: "#555" }}>⏱ {track.duration}</div>}
-            <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>▶ {track?.plays?.toLocaleString()} plays</div>
+            {track?.duration && <div style={{ fontSize: 13, color: "#b3b3b3" }}>⏱ {track.duration}</div>}
+            <div style={{ fontSize: 12, color: "#a3a3a3", marginTop: 4 }}>▶ {track?.plays?.toLocaleString()} plays</div>
           </div>
         </div>
 
@@ -143,9 +143,9 @@ export default function TrackDetail({ trackId }: Props) {
             <h2 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 700 }}>1. Choose a License</h2>
 
             {pricesLoading ? (
-              <div style={{ color: "#555", padding: "40px 0", textAlign: "center" }}>Loading license options…</div>
+              <div style={{ color: "#b3b3b3", padding: "40px 0", textAlign: "center" }}>Loading license options…</div>
             ) : pricesQuery.isError || sortedPrices.length === 0 ? (
-              <div style={{ background: "#111", border: "1px solid #1c1c1c", borderRadius: 12, padding: 24, color: "#666", textAlign: "center" }}>
+              <div style={{ background: "#111", border: "1px solid #1c1c1c", borderRadius: 12, padding: 24, color: "#b3b3b3", textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
                 <p role={pricesQuery.isError ? "alert" : "status"} style={{ margin: 0, color: "#bbb" }}>
                   {pricesQuery.isError
@@ -192,9 +192,9 @@ export default function TrackDetail({ trackId }: Props) {
                         <div style={{ color: isSelected ? info.color : "#fff", fontWeight: 600, fontSize: 15, marginBottom: 2 }}>
                           {lt} License
                         </div>
-                        <div style={{ color: "#555", fontSize: 12 }}>{info.desc}</div>
+                        <div style={{ color: "#b3b3b3", fontSize: 12 }}>{info.desc}</div>
                       </div>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: isSelected ? info.color : "#777", flexShrink: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 18, color: isSelected ? info.color : "#c4c4c4", flexShrink: 0 }}>
                         {centsToDisplay(price.unit_amount)}
                       </div>
                     </button>
@@ -210,36 +210,36 @@ export default function TrackDetail({ trackId }: Props) {
               <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700 }}>2. Your Details</h2>
               <form onSubmit={handleCheckout} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, color: "#555", marginBottom: 6, fontWeight: 600 }}>FULL NAME</label>
+                  <label style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>FULL NAME</label>
                   <input
                     required
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Jane Smith"
-                    style={{ width: "100%", background: "#0d0d0d", border: "1px solid #222", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", background: "#0d0d0d", border: "1px solid #222", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, boxSizing: "border-box" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, color: "#555", marginBottom: 6, fontWeight: 600 }}>EMAIL ADDRESS</label>
+                  <label style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>EMAIL ADDRESS</label>
                   <input
                     required
                     type="email"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     placeholder="jane@example.com"
-                    style={{ width: "100%", background: "#0d0d0d", border: "1px solid #222", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", background: "#0d0d0d", border: "1px solid #222", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, boxSizing: "border-box" }}
                   />
                 </div>
 
                 {/* Order summary */}
                 {selectedPrice && (
                   <div style={{ background: "#0d0d0d", border: "1px solid #1c1c1c", borderRadius: 10, padding: 14, marginTop: 4 }}>
-                    <div style={{ fontSize: 11, color: "#444", marginBottom: 8, fontWeight: 600, letterSpacing: "0.5px" }}>ORDER SUMMARY</div>
+                    <div style={{ fontSize: 11, color: "#a3a3a3", marginBottom: 8, fontWeight: 600, letterSpacing: "0.5px" }}>ORDER SUMMARY</div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ color: "#777", fontSize: 13 }}>{track?.title}</span>
+                      <span style={{ color: "#c4c4c4", fontSize: 13 }}>{track?.title}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#777", fontSize: 13 }}>{selectedPrice.product_metadata?.license_type} License</span>
+                      <span style={{ color: "#c4c4c4", fontSize: 13 }}>{selectedPrice.product_metadata?.license_type} License</span>
                       <span style={{ color: "#00d4aa", fontWeight: 700 }}>{centsToDisplay(selectedPrice.unit_amount)}</span>
                     </div>
                   </div>
@@ -272,7 +272,7 @@ export default function TrackDetail({ trackId }: Props) {
                   disabled={!canCheckout}
                   style={{
                     background: canCheckout ? "#00d4aa" : "#1c1c1c",
-                    color: canCheckout ? "#000" : "#444",
+                    color: canCheckout ? "#000" : "#a3a3a3",
                     border: "none",
                     borderRadius: 12,
                     padding: "14px",
@@ -286,7 +286,7 @@ export default function TrackDetail({ trackId }: Props) {
                   {loading ? "Redirecting to Stripe…" : selectedPrice ? `Pay ${centsToDisplay(selectedPrice.unit_amount)} →` : "Select a License to Continue"}
                 </button>
 
-                <p style={{ margin: 0, fontSize: 11, color: "#444", textAlign: "center" }}>
+                <p style={{ margin: 0, fontSize: 11, color: "#a3a3a3", textAlign: "center" }}>
                   🔒 Secured by Stripe · Instant delivery after payment
                 </p>
               </form>

@@ -93,3 +93,20 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Checkout input readability */
+.track-checkout-form input::placeholder {
+  color: #a3a3a3;
+  opacity: 1;
+}
+
+.track-checkout-form input:focus {
+  outline: 2px solid #00d4aa;
+  outline-offset: 2px;
+}
+
+.track-checkout-form button:focus-visible,
+.track-checkout-grid button:focus-visible {
+  outline: 2px solid #00d4aa;
+  outline-offset: 3px;
+}
