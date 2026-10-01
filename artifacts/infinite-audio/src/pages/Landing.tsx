@@ -1,3 +1,4 @@
+import LicensePricing from "./LicensePricing";
 import { LiveRevenuePreview, useLandingMetrics, landingMoney, type LandingMetricsState } from "./LiveRevenuePreview";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
@@ -1282,103 +1283,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
 
       <LiveRevenuePreview isSignedIn={isSignedIn} report={liveReport} />
 
-      {/* Pricing */}
-      <section id="pricing" style={{ padding: "5rem 2rem" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto 3rem", textAlign: "center" }}>
-          <h2 style={{ fontSize: "2.25rem", fontWeight: 700 }}>Simple, Transparent Pricing</h2>
-          <p style={{ color: "#9ca3af", maxWidth: "42rem", margin: "0.5rem auto 0" }}>
-            Choose the license that fits your project. No hidden fees, no surprises.
-          </p>
-        </div>
-
-        <div style={{ maxWidth: "80rem", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem" }}>
-          {/* Free */}
-          <PricingCard
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={48} height={48}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-              </svg>
-            }
-            name="FREE"
-            type="Standard"
-            price="$0"
-            features={["Attribution required", "Personal projects only", "YouTube under 10K subscribers", "Basic metadata included"]}
-            ctaText="Download Free"
-            ctaVariant="secondary"
-          />
-
-          {/* Commercial - Featured */}
-          <PricingCard
-            featured
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={48} height={48}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            }
-            name="COMMERCIAL"
-            type="Creator's Shield"
-            price="$49"
-            priceUnit="/track"
-            features={["Zero copyright claims guaranteed", "Unlimited commercial use", "YouTube, podcasts & social media", "Full metadata & stems", "Priority support"]}
-            ctaText="Get Commercial License"
-            ctaVariant="primary"
-          />
-
-          {/* Enterprise */}
-          <PricingCard
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={48} height={48}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            }
-            name="ENTERPRISE"
-            type="Broadcast & TV"
-            price="$199"
-            priceUnit="+/track"
-            features={["TV, film & documentary licensing", "Unlimited broadcast rights", "Custom contract available", "Exclusive usage terms", "Dedicated account manager"]}
-            ctaText="Contact for Pricing"
-            ctaVariant="secondary"
-          />
-        </div>
-
-        {/* Bundle Offer */}
-        <div style={{ maxWidth: "48rem", margin: "4rem auto 0" }}>
-          <div style={{
-            background: "linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2), rgba(236,72,153,0.2))",
-            border: "1px solid rgba(6,182,212,0.3)",
-            borderRadius: "1.5rem", padding: "2.5rem", textAlign: "center"
-          }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "0.5rem",
-              background: "rgba(6,182,212,0.2)", borderRadius: 9999,
-              padding: "0.5rem 1rem", marginBottom: "1.5rem",
-              color: "var(--cyan-400)", fontSize: "0.875rem", fontWeight: 500
-            }}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={16} height={16}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              LIMITED TIME OFFER
-            </div>
-            <h3 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "1rem" }}>Standard Bundle</h3>
-            <p style={{ color: "#d1d5db", marginBottom: "1.5rem" }}>
-              Get 5 premium Khmer Smoke tracks for just{" "}
-              <strong style={{ color: "var(--cyan-400)" }}>$49</strong>.
-              The perfect starting point for creators ready to elevate their content.
-            </p>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
-              <PrimaryButton>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width={20} height={20}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Get 5 Tracks for $49
-              </PrimaryButton>
-              <a href="#" style={{ color: "var(--cyan-400)", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
-                View All Bundles →
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
+      <LicensePricing />
 
       {/* Testimonials */}
       <section style={{ padding: "5rem 2rem", background: "linear-gradient(180deg, transparent, rgba(6,182,212,0.05), transparent)" }}>
@@ -1619,87 +1524,6 @@ function UseCaseCard({ title, desc, icon }: { title: string; desc: string; icon:
       <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.5rem" }}>{title}</h3>
       <p style={{ color: "#9ca3af", fontSize: "0.875rem" }}>{desc}</p>
     </div>
-  );
-}
-
-function PricingCard({
-  icon, name, type, price, priceUnit, features, ctaText, ctaVariant, featured
-}: {
-  icon: React.ReactNode; name: string; type: string; price: string; priceUnit?: string;
-  features: string[]; ctaText: string; ctaVariant: "primary" | "secondary"; featured?: boolean;
-}) {
-  return (
-    <div style={{
-      background: featured ? "linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))" : "rgba(255,255,255,0.05)",
-      border: featured ? "2px solid var(--cyan-500)" : "1px solid rgba(255,255,255,0.1)",
-      borderRadius: "1.5rem", padding: "2rem", position: "relative", transition: "all 0.3s"
-    }}>
-      {featured && (
-        <span style={{
-          position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
-          background: "var(--cyan-500)", color: "#000", fontSize: "0.75rem",
-          fontWeight: 700, padding: "0.25rem 1rem", borderRadius: 9999
-        }}>
-          MOST POPULAR
-        </span>
-      )}
-      <div style={{ color: featured ? "var(--cyan-400)" : "#9ca3af", marginBottom: "1rem" }}>{icon}</div>
-      <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem" }}>{name}</h3>
-      <p style={{ color: "#9ca3af", marginBottom: "1rem" }}>{type}</p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem", marginBottom: "1.5rem" }}>
-        <span style={{ fontSize: "3rem", fontWeight: 700 }}>{price}</span>
-        {priceUnit && <span style={{ color: "#9ca3af" }}>{priceUnit}</span>}
-      </div>
-      <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-        {features.map(f => (
-          <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", padding: "0.75rem 0", fontSize: "0.875rem", color: "#d1d5db" }}>
-            <CheckIcon />
-            {f}
-          </li>
-        ))}
-      </ul>
-      <PricingCta variant={ctaVariant}>{ctaText}</PricingCta>
-    </div>
-  );
-}
-
-function PricingCta({ children, variant }: { children: React.ReactNode; variant: "primary" | "secondary" }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      style={{
-        width: "100%", padding: "1rem", borderRadius: "0.75rem", fontWeight: 600,
-        cursor: "pointer", transition: "all 0.2s",
-        background: variant === "primary" ? (hov ? "var(--cyan-400)" : "var(--cyan-500)") : (hov ? "rgba(255,255,255,0.1)" : "transparent"),
-        color: variant === "primary" ? "#000" : "#fff",
-        border: variant === "primary" ? "none" : "1px solid rgba(255,255,255,0.2)"
-      }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PrimaryButton({ children }: { children: React.ReactNode }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      style={{
-        display: "inline-flex", alignItems: "center", gap: "0.5rem",
-        background: "var(--cyan-500)", color: "#000",
-        padding: "1rem 2rem", borderRadius: 9999, fontWeight: 700, border: "none",
-        cursor: "pointer", transition: "all 0.2s",
-        boxShadow: "0 0 30px rgba(6,182,212,0.3)",
-        transform: hov ? "translateY(-2px)" : "none",
-        backgroundColor: hov ? "var(--cyan-400)" : "var(--cyan-500)"
-      }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-    >
-      {children}
-    </button>
   );
 }
 
