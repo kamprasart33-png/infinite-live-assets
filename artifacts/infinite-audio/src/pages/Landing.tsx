@@ -1,3 +1,4 @@
+import { LiveRevenuePreview, useLandingMetrics, landingMoney, type LandingMetricsState } from "./LiveRevenuePreview";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
@@ -114,16 +115,19 @@ const signedInLinks: NavLink[] = [
   { label: "Astra", href: "/dashboard", highlight: true },
 ];
 
-function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
+function AstraWidget({ isSignedIn, report }: { isSignedIn: boolean; report: LandingMetricsState }) {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const [typed, setTyped] = useState("");
   const [showCursor, setShowCursor] = useState(true);
 
-  const greeting = isSignedIn ? "Good morning, Prasart." : "Hello. I'm Astra.";
-  const line1 = isSignedIn ? "Today's revenue increased 18%." : "Your AI music licensing co-pilot.";
+  const greeting = isSignedIn ? "Welcome back." : "Hello. I'm Astra.";
+  const line1 = !isSignedIn ? "Your AI music licensing co-pilot."
+    : report.error ? "Revenue is currently unavailable."
+    : report.metrics ? `Today's live revenue: ${landingMoney(report.metrics.todayRevenueCents)}.`
+    : "Loading live revenue...";
   const line2 = isSignedIn
-    ? "Your top opportunity is Khmer Smoke – My Side."
+    ? "Open your dashboard to explore live sales."
     : "Sign in to unlock your dashboard.";
 
   // Pulse in after mount
@@ -232,8 +236,8 @@ function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
           {isSignedIn && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.9rem", animation: "fadeIn 0.6s ease" }}>
               {[
-                { label: "Revenue Today", value: "$2,430", up: true },
-                { label: "Opp. Score", value: "94%", up: true },
+                { label: "Revenue Today", value: report.metrics ? landingMoney(report.metrics.todayRevenueCents) : "—" },
+                { label: "Revenue This Month", value: report.metrics ? landingMoney(report.metrics.monthlyRevenueCents) : "—" },
               ].map(stat => (
                 <div key={stat.label} style={{
                   background: "rgba(255,255,255,0.04)",
@@ -309,6 +313,7 @@ function AstraWidget({ isSignedIn }: { isSignedIn: boolean }) {
 }
 
 export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { onSignIn: () => void; isSignedIn?: boolean; onSignOut?: () => void }) {
+  const liveReport = useLandingMetrics(isSignedIn);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [playError, setPlayError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -1275,129 +1280,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
         </div>
       </section>
 
-      {/* ASTRA LIVE — CEO Dashboard Preview */}
-      <section style={{ padding: "5rem 2rem" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "0.5rem",
-              background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)",
-              borderRadius: 9999, padding: "0.35rem 1rem", marginBottom: "1rem"
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: "var(--cyan-400)",
-                display: "inline-block",
-                animation: "pulse 1.5s ease-in-out infinite"
-              }} />
-              <span style={{ color: "var(--cyan-400)", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em" }}>LIVE</span>
-            </div>
-            <h2 style={{ fontSize: "2.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-              CEO Dashboard Preview
-            </h2>
-            <p style={{ color: "#9ca3af" }}>
-              Powered by <span style={{ color: "var(--cyan-400)", fontWeight: 600 }}>ASTRA LIVE</span> — real-time intelligence for your catalog
-            </p>
-          </div>
-
-          {/* Dashboard Card */}
-          <div style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(6,182,212,0.25)",
-            borderRadius: 20,
-            overflow: "hidden",
-            boxShadow: "0 0 60px rgba(6,182,212,0.08)"
-          }}>
-            {/* Top Bar */}
-            <div style={{
-              background: "rgba(6,182,212,0.08)",
-              borderBottom: "1px solid rgba(6,182,212,0.15)",
-              padding: "0.85rem 1.5rem",
-              display: "flex", alignItems: "center", gap: "0.6rem"
-            }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-              <span style={{ marginLeft: "auto", color: "var(--cyan-400)", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.05em" }}>
-                ASTRA LIVE · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-              </span>
-            </div>
-
-            <div style={{ padding: "2rem" }}>
-              {/* KPI Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-                {[
-                  { label: "Today's Revenue", value: "$2,430", icon: "💰", color: "var(--cyan-400)" },
-                  { label: "Commercial Licenses", value: "18", icon: "📄", color: "var(--purple-500)" },
-                  { label: "Enterprise Deals", value: "4", icon: "🤝", color: "#f59e0b" },
-                  { label: "AI Opportunity Score", value: "94%", icon: "🧠", color: "#22c55e" },
-                ].map((kpi) => (
-                  <div key={kpi.label} style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 14,
-                    padding: "1.25rem",
-                    transition: "border-color 0.2s"
-                  }}>
-                    <div style={{ fontSize: "1.4rem", marginBottom: "0.4rem" }}>{kpi.icon}</div>
-                    <div style={{ fontSize: "1.75rem", fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
-                    <div style={{ fontSize: "0.8rem", color: "#9ca3af", marginTop: "0.35rem" }}>{kpi.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Top Selling Track */}
-              <div style={{
-                background: "rgba(6,182,212,0.06)",
-                border: "1px solid rgba(6,182,212,0.2)",
-                borderRadius: 14,
-                padding: "1.25rem 1.5rem",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                flexWrap: "wrap", gap: "1rem",
-                marginBottom: "1.5rem"
-              }}>
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>🏆 Top Selling Track</div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 700 }}>Khmer Smoke – My Side</div>
-                </div>
-                <div style={{
-                  background: "rgba(6,182,212,0.15)",
-                  border: "1px solid rgba(6,182,212,0.3)",
-                  borderRadius: 9999, padding: "0.3rem 0.9rem",
-                  color: "var(--cyan-400)", fontSize: "0.8rem", fontWeight: 600
-                }}>
-                  #1 This Week
-                </div>
-              </div>
-
-              {/* Recommended Action */}
-              <div style={{
-                background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(6,182,212,0.08))",
-                border: "1px solid rgba(168,85,247,0.3)",
-                borderRadius: 14,
-                padding: "1.5rem"
-              }}>
-                <div style={{ fontSize: "0.7rem", color: "var(--purple-500)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
-                  ⚡ AI Recommended Action
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-                  <div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.25rem" }}>Promote Track #17</div>
-                    <div style={{ fontSize: "0.875rem", color: "#9ca3af" }}>
-                      ASTRA detected rising demand in the Film licensing segment for this track's sonic profile.
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "0.2rem" }}>Potential Revenue</div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#22c55e" }}>+$520</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <LiveRevenuePreview isSignedIn={isSignedIn} report={liveReport} />
 
       {/* Pricing */}
       <section id="pricing" style={{ padding: "5rem 2rem" }}>
@@ -1624,7 +1507,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
       </footer>
 
       {/* Floating Astra Widget */}
-      <AstraWidget isSignedIn={isSignedIn} />
+      <AstraWidget isSignedIn={isSignedIn} report={liveReport} />
     </div>
   );
 }
