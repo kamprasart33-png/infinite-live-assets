@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks, useLicensePrices } from "@/hooks/use-dashboard-data";
 import { api, centsToDisplay, type LicensePrice } from "@/lib/api";
@@ -31,6 +31,19 @@ export default function TrackDetail({ trackId }: Props) {
   const [customerEmail, setCustomerEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        setLoading(false);
+        setError(null);
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
 
   // Sort prices by amount
   const sortedPrices = [...prices].sort((a, b) => {
