@@ -3,7 +3,7 @@ import { Router } from "express";
 import { getDashboardMetrics, getRevenueHistory, getDailySales } from "../services/metrics.service";
 
 const router = Router();
-router.use(requireAuth);
+router.use("/metrics", requireAuth);
 
 router.get("/metrics/dashboard", async (_req, res) => {
   try {
