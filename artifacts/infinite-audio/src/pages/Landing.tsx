@@ -1386,9 +1386,18 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
               </p>
             </div>
 
-            <FooterColumn title="Music Library" links={["All Tracks", "Bundles", "New Releases"]} />
-            <FooterColumn title="Licensing" links={["Free License", "Commercial License", "Enterprise License"]} />
-            <FooterColumn title="Support" links={["FAQ", "Contact Us", "Discord Community"]} />
+            <FooterColumn title="Music Library" links={[
+              { label: "All Tracks", href: "/store" },
+              { label: "Featured Tracks", href: "#tracks" },
+            ]} />
+            <FooterColumn title="Licensing" links={[
+              { label: "License Pricing", href: "#pricing" },
+              { label: "Choose a Track", href: "/store" },
+            ]} />
+            <FooterColumn title="Support" links={[
+              { label: "Contact Us", href: "#contact" },
+              { label: "Email Support", href: "mailto:contact@infiniteaudioarchive.com" },
+            ]} />
           </div>
 
           <div style={{ paddingTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1528,18 +1537,18 @@ function UseCaseCard({ title, desc, icon }: { title: string; desc: string; icon:
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: string[] }) {
+function FooterColumn({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
       <h4 style={{ fontWeight: 600, marginBottom: "1rem" }}>{title}</h4>
       <ul style={{ listStyle: "none" }}>
         {links.map(link => (
-          <li key={link} style={{ marginBottom: "0.5rem" }}>
-            <a href="#" style={{ color: "#9ca3af", textDecoration: "none", fontSize: "0.875rem", transition: "color 0.2s" }}
+          <li key={link.label} style={{ marginBottom: "0.5rem" }}>
+            <a href={link.href} style={{ color: "#9ca3af", textDecoration: "none", fontSize: "0.875rem", transition: "color 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.color = "var(--cyan-400)")}
               onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
             >
-              {link}
+              {link.label}
             </a>
           </li>
         ))}
