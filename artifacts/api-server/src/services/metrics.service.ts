@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import { transactions, tracks, customers, licenses } from "@workspace/db/schema";
 import { sql, gte, and, eq } from "drizzle-orm";
+import { liveTransactionFilter, liveLicenseFilter, liveCustomerFilter } from "./live-reporting";
 
 function startOfToday(): Date {
   const d = new Date();
@@ -24,20 +25,21 @@ export async function getDashboardMetrics() {
     db
       .select({ total: sql<number>`coalesce(sum(amount_cents), 0)` })
       .from(transactions)
-      .where(and(gte(transactions.createdAt, today), eq(transactions.status, "active")))
+      .where(and(gte(transactions.createdAt, today), liveTransactionFilter))
       .then((r) => Number(r[0]?.total ?? 0)),
 
     // Monthly revenue
     db
       .select({ total: sql<number>`coalesce(sum(amount_cents), 0)` })
       .from(transactions)
-      .where(and(gte(transactions.createdAt, monthStart), eq(transactions.status, "active")))
+      .where(and(gte(transactions.createdAt, monthStart), liveTransactionFilter))
       .then((r) => Number(r[0]?.total ?? 0)),
 
     // Total sales count (all time)
     db
       .select({ count: sql<number>`count(*)` })
       .from(transactions)
+      .where(liveTransactionFilter)
       .then((r) => Number(r[0]?.count ?? 0)),
 
     // Total tracks
@@ -50,14 +52,14 @@ export async function getDashboardMetrics() {
     db
       .select({ count: sql<number>`count(*)` })
       .from(customers)
-      .where(eq(customers.status, "active"))
+      .where(and(eq(customers.status, "active"), liveCustomerFilter))
       .then((r) => Number(r[0]?.count ?? 0)),
 
     // Active licenses
     db
       .select({ count: sql<number>`count(*)` })
       .from(licenses)
-      .where(eq(licenses.status, "active"))
+      .where(liveLicenseFilter)
       .then((r) => Number(r[0]?.count ?? 0)),
   ]);
 
@@ -65,7 +67,7 @@ export async function getDashboardMetrics() {
   const totalRevResult = await db
     .select({ total: sql<number>`coalesce(sum(amount_cents), 0)` })
     .from(transactions)
-    .where(eq(transactions.status, "active"));
+    .where(liveTransactionFilter);
   const totalRevenue = Number(totalRevResult[0]?.total ?? 0);
 
   return {
@@ -88,6 +90,11 @@ export async function getRevenueHistory() {
       COALESCE(SUM(amount_cents), 0)::int AS revenue
     FROM transactions
     WHERE status = 'active'
+      AND EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.id = transactions.order_id
+          AND o.livemode = true AND o.status = 'completed'
+      )
       AND created_at >= NOW() - INTERVAL '12 months'
     GROUP BY DATE_TRUNC('month', created_at)
     ORDER BY DATE_TRUNC('month', created_at) ASC
@@ -103,6 +110,11 @@ export async function getDailySales() {
       COALESCE(SUM(amount_cents), 0)::int AS sales
     FROM transactions
     WHERE status = 'active'
+      AND EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.id = transactions.order_id
+          AND o.livemode = true AND o.status = 'completed'
+      )
       AND created_at >= NOW() - INTERVAL '14 days'
     GROUP BY created_at::date
     ORDER BY created_at::date ASC

@@ -4,6 +4,7 @@ import {
   varchar,
   integer,
   timestamp,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -14,6 +15,7 @@ export const orders = pgTable("orders", {
     .notNull()
     .unique(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  livemode: boolean("livemode"),
   trackId: integer("track_id"),
   trackTitle: varchar("track_title", { length: 255 }),
   licenseType: varchar("license_type", { length: 100 }).notNull(),

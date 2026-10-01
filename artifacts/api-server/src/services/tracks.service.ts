@@ -26,7 +26,13 @@ export async function getTopSellingTracks(limit = 10) {
       COALESCE(SUM(tx.amount_cents), 0)::int AS revenue_cents,
       COUNT(tx.id)::int AS license_count
     FROM tracks t
-    LEFT JOIN transactions tx ON tx.track_id = t.id AND tx.status = 'active'
+    LEFT JOIN transactions tx ON tx.track_id = t.id
+      AND tx.status = 'active'
+      AND EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.id = tx.order_id
+          AND o.livemode = true AND o.status = 'completed'
+      )
     GROUP BY t.id
     ORDER BY revenue_cents DESC
     LIMIT ${limit}

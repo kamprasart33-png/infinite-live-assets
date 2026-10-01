@@ -1,9 +1,11 @@
 import { pgTable, serial, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { orders } from "./orders";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).unique(),
   trackId: integer("track_id"),
   customerId: integer("customer_id"),
   // Denormalized for fast display without joins

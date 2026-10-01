@@ -157,6 +157,7 @@ export async function ensureBusinessRecords(order: Order) {
 
       // 5. Dashboard transaction — same atomic scope, written exactly once
       await tx.insert(transactions).values({
+        orderId: order.id,
         trackId: order.trackId,
         customerId: customer.id,
         trackTitle: order.trackTitle ?? "Unknown Track",
@@ -210,6 +211,7 @@ export async function fulfillOrder(sessionId: string): Promise<Order> {
     .insert(orders)
     .values({
       stripeSessionId: sessionId,
+      livemode: session.livemode,
       stripePaymentIntentId:
         typeof session.payment_intent === "string"
           ? session.payment_intent
