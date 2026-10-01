@@ -122,7 +122,7 @@ export default function TrackDetail({ trackId }: Props) {
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid #1a1a1a", padding: "0 24px", display: "flex", alignItems: "center", gap: 16, height: 64 }}>
-        <button onClick={() => navigate("/store")} style={{ background: "transparent", border: "none", color: "#b3b3b3", cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <button type="button" aria-label="Back to music store" onClick={() => navigate("/store")} style={{ background: "transparent", border: "none", color: "#b3b3b3", cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,#00d4aa,#7c6af7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🎵</div>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Infinite Audio Archive</span>
@@ -223,8 +223,11 @@ export default function TrackDetail({ trackId }: Props) {
               <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700 }}>2. Your Details</h2>
               <form onSubmit={handleCheckout} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>FULL NAME</label>
+                  <label htmlFor="checkout-name" style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>FULL NAME</label>
                   <input
+                    id="checkout-name"
+                    name="name"
+                    autoComplete="name"
                     required
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
@@ -233,8 +236,14 @@ export default function TrackDetail({ trackId }: Props) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>EMAIL ADDRESS</label>
+                  <label htmlFor="checkout-email" style={{ display: "block", fontSize: 12, color: "#b3b3b3", marginBottom: 6, fontWeight: 600 }}>EMAIL ADDRESS</label>
                   <input
+                    id="checkout-email"
+                    name="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     required
                     type="email"
                     value={customerEmail}
