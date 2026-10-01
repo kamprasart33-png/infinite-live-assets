@@ -1,7 +1,7 @@
+import { useLicenseStartingPrice } from "@/hooks/use-license-starting-price";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
-import { centsToDisplay } from "@/lib/api";
 
 const genreColor: Record<string, string> = {
   "Khmer Hip-Hop": "#e74c3c",
@@ -19,6 +19,7 @@ export default function Store() {
   const [query, setQuery] = useState("");
   const [genre, setGenre] = useState("All");
 
+  const startingPrice = useLicenseStartingPrice();
   const { data: tracks = [], isLoading } = useStoreTracks();
 
   // Genre chips derived from the live catalog so they never go stale
@@ -165,9 +166,8 @@ export default function Store() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "#444", marginBottom: 2 }}>FROM</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: "#00d4aa" }}>
-                      {centsToDisplay(3900)}
+                      {startingPrice}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>

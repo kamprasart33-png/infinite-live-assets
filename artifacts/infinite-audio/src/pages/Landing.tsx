@@ -1,9 +1,9 @@
+import { useLicenseStartingPrice } from "@/hooks/use-license-starting-price";
 import LicensePricing from "./LicensePricing";
 import { LiveRevenuePreview, useLandingMetrics, landingMoney, type LandingMetricsState } from "./LiveRevenuePreview";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
-import { centsToDisplay } from "@/lib/api";
 import "../index.css";
 
 type FeaturedTrack = {
@@ -322,6 +322,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
   const [avatarHover, setAvatarHover] = useState(false);
   const [, navigate] = useLocation();
 
+  const startingPrice = useLicenseStartingPrice();
   const { data: storeTracks = [] } = useStoreTracks();
   const tracks = [...storeTracks]
     .sort((a, b) => Number(b.audioReady) - Number(a.audioReady) || (b.plays ?? 0) - (a.plays ?? 0))
@@ -332,7 +333,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
       description: (t.genre && genreBlurb[t.genre]) || "original track from the Infinite Audio Archive",
       duration: t.duration ?? "",
       genre: t.genre ?? "",
-      price: centsToDisplay(t.priceCents),
+      price: startingPrice,
       audioReady: t.audioReady,
     }));
 
