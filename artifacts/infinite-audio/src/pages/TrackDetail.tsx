@@ -185,6 +185,8 @@ export default function TrackDetail({ trackId }: Props) {
                   return (
                     <button
                       key={price.price_id}
+                      type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setSelectedPrice(price)}
                       style={{
                         background: isSelected ? `${info.color}12` : "#111",
