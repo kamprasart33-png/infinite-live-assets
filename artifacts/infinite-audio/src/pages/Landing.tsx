@@ -1,6 +1,6 @@
 import { useLicenseStartingPrice } from "@/hooks/use-license-starting-price";
 import LicensePricing from "./LicensePricing";
-import { LiveRevenuePreview, useLandingMetrics, landingMoney, type LandingMetricsState } from "./LiveRevenuePreview";
+import { useLandingMetrics } from "./LiveRevenuePreview";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useStoreTracks } from "@/hooks/use-dashboard-data";
@@ -100,6 +100,7 @@ function ChevronRight({ size = 16 }: { size?: number }) {
 type NavLink = { label: string; href: string; highlight?: boolean };
 
 const publicLinks: NavLink[] = [
+  { label: "Astra", href: "#tracks", highlight: true },
   { label: "Library", href: "#tracks" },
   { label: "Licensing", href: "#pricing" },
   { label: "Pricing", href: "#pricing" },
@@ -108,28 +109,21 @@ const publicLinks: NavLink[] = [
   { label: "About", href: "#about" },
 ];
 
-const signedInLinks: NavLink[] = [
-  { label: "Library", href: "#tracks" },
-  { label: "Sales", href: "/dashboard" },
-  { label: "Licensing", href: "#pricing" },
-  { label: "Analytics", href: "/dashboard" },
-  { label: "Astra", href: "/dashboard", highlight: true },
-];
-
-function AstraWidget({ isSignedIn, report }: { isSignedIn: boolean; report: LandingMetricsState }) {
+function AstraWidget(_props: { isSignedIn: boolean; report: unknown }) {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const [typed, setTyped] = useState("");
   const [showCursor, setShowCursor] = useState(true);
 
-  const greeting = isSignedIn ? "Welcome back." : "Hello. I'm Astra.";
-  const line1 = !isSignedIn ? "Your AI music licensing co-pilot."
-    : report.error ? "Revenue is currently unavailable."
-    : report.metrics ? `Today's live revenue: ${landingMoney(report.metrics.todayRevenueCents)}.`
-    : "Loading live revenue...";
-  const line2 = isSignedIn
-    ? "Open your dashboard to explore live sales."
-    : "Sign in to unlock your dashboard.";
+  const greeting = "Hello. I'm Astra.";
+  const line1 = "Find music for your next video, podcast, film, or business project.";
+  const line2 = "Preview tracks, compare license options, and choose your music.";
+
+  useEffect(() => {
+    const openPanel = () => setOpen(true);
+    window.addEventListener("open-public-astra", openPanel);
+    return () => window.removeEventListener("open-public-astra", openPanel);
+  }, []);
 
   // Pulse in after mount
   useEffect(() => {
@@ -233,27 +227,17 @@ function AstraWidget({ isSignedIn, report }: { isSignedIn: boolean; report: Land
             )}
           </div>
 
-          {/* Stats row (signed in only) */}
-          {isSignedIn && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.9rem", animation: "fadeIn 0.6s ease" }}>
-              {[
-                { label: "Revenue Today", value: report.metrics ? landingMoney(report.metrics.todayRevenueCents) : "—" },
-                { label: "Revenue This Month", value: report.metrics ? landingMoney(report.metrics.monthlyRevenueCents) : "—" },
-              ].map(stat => (
-                <div key={stat.label} style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 10, padding: "0.65rem 0.75rem"
-                }}>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--cyan-400)" }}>{stat.value}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <a href="#pricing" onClick={() => setOpen(false)} style={{
+            display: "block", textAlign: "center", color: "var(--cyan-400)",
+            padding: "0.7rem", marginBottom: "0.6rem",
+            border: "1px solid rgba(6,182,212,0.35)", borderRadius: 10,
+            textDecoration: "none", fontWeight: 600
+          }}>
+            View License Pricing
+          </a>
 
           {/* CTA */}
-          <a href={isSignedIn ? "/dashboard" : "/login"} style={{
+          <a href="#tracks" onClick={() => setOpen(false)} style={{
             display: "block", textAlign: "center",
             background: "linear-gradient(135deg, var(--cyan-500), var(--purple-500))",
             color: "#fff", fontWeight: 700, fontSize: "0.85rem",
@@ -264,7 +248,7 @@ function AstraWidget({ isSignedIn, report }: { isSignedIn: boolean; report: Land
             onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
             onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
           >
-            {isSignedIn ? "Open Dashboard" : "Sign In to Get Started"}
+            Browse Music
           </a>
 
           <p style={{ fontSize: "0.68rem", color: "#374151", textAlign: "center", marginTop: "0.6rem" }}>
@@ -314,7 +298,7 @@ function AstraWidget({ isSignedIn, report }: { isSignedIn: boolean; report: Land
 }
 
 export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { onSignIn: () => void; isSignedIn?: boolean; onSignOut?: () => void }) {
-  const liveReport = useLandingMetrics(isSignedIn);
+  const liveReport = useLandingMetrics(false);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [playError, setPlayError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -364,7 +348,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
     });
   };
 
-  const links = isSignedIn ? signedInLinks : publicLinks;
+  const links = publicLinks;
 
   return (
     <div style={{ backgroundColor: "#000", color: "#fff", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
@@ -399,7 +383,10 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
           <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
             {links.map(link => (
               link.highlight ? (
-                <a key={link.label} href={link.href} style={{
+                <a key={link.label} href={link.href} onClick={event => {
+                  event.preventDefault();
+                  window.dispatchEvent(new Event("open-public-astra"));
+                }} style={{
                   display: "inline-flex", alignItems: "center", gap: "0.35rem",
                   background: "linear-gradient(135deg, rgba(6,182,212,0.15), rgba(168,85,247,0.15))",
                   border: "1px solid rgba(6,182,212,0.35)",
@@ -492,9 +479,11 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
                     e.currentTarget.style.color = "#d1d5db";
                   }}
                 >
-                  Sign In
+                  Admin Sign In
                 </button>
-                <button onClick={handleSignIn} style={{
+                <button onClick={() => {
+                  document.getElementById("tracks")?.scrollIntoView({ behavior: "smooth" });
+                }} style={{
                   background: "var(--cyan-500)", color: "#000",
                   padding: "0.45rem 1.1rem", borderRadius: 9999,
                   fontWeight: 600, border: "none", cursor: "pointer",
@@ -504,7 +493,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
                   onMouseEnter={e => (e.currentTarget.style.background = "var(--cyan-400)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "var(--cyan-500)")}
                 >
-                  Get Started
+                  Browse Music
                 </button>
               </>
             )}
@@ -1282,7 +1271,7 @@ export default function Landing({ onSignIn, isSignedIn = false, onSignOut }: { o
         </div>
       </section>
 
-      <LiveRevenuePreview isSignedIn={isSignedIn} report={liveReport} />
+      
 
       <LicensePricing />
 
