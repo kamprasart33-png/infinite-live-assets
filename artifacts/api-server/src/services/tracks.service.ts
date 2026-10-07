@@ -1,9 +1,9 @@
 import { db } from "@workspace/db";
 import { tracks, transactions } from "@workspace/db/schema";
-import { sql, desc, eq } from "drizzle-orm";
+import { sql, desc, eq, isNull } from "drizzle-orm";
 
 export async function getAllTracks() {
-  const rows = await db.select().from(tracks).orderBy(desc(tracks.createdAt));
+  const rows = await db.select().from(tracks).where(isNull(tracks.deletedAt)).orderBy(desc(tracks.createdAt));
   return rows.map(({ fileUrl, ...track }) => ({ ...track, audioReady: Boolean(fileUrl) }));
 }
 

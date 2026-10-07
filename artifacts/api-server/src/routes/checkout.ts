@@ -5,7 +5,7 @@ import {
 } from "../services/checkout.service";
 import { db } from "@workspace/db";
 import { tracks } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { storage } from "../storage";
 
 const router: IRouter = Router();
@@ -15,7 +15,7 @@ router.post("/checkout/create-session", async (req, res) => {
   const { trackId, priceId, customerName, customerEmail } =
     req.body;
 
-  if (!Number.isSafeInteger(Number(trackId)) || Number(trackId) < 1 ||
+  if (!Number.isSafeInteger(Number(trackId)) || Number(trackId) < 1 || Number(trackId) > 2147483647 ||
       typeof priceId !== "string" || !priceId ||
       typeof customerName !== "string" || !customerName.trim() ||
       typeof customerEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
@@ -24,8 +24,13 @@ router.post("/checkout/create-session", async (req, res) => {
   }
 
   try {
-    const [track] = await db.select().from(tracks).where(eq(tracks.id, Number(trackId)));
+    await db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(8147, ${Number(trackId)})`);
+    const [track] = await tx.select().from(tracks).where(eq(tracks.id, Number(trackId)));
     if (!track) { res.status(404).json({ error: "Track not found" }); return; }
+    if (track.archivedAt || track.deletedAt) {
+      res.status(409).json({ error: "This track is archived and unavailable for new purchases." }); return;
+    }
     if (!track.fileUrl) {
       res.status(409).json({ error: "Audio download is not ready for this track. Please check back later." });
       return;
@@ -53,7 +58,8 @@ router.post("/checkout/create-session", async (req, res) => {
       baseUrl,
     });
 
-    res.json({ url: session.url });
+    return session.url;
+    }).then(url => { if (url !== undefined) res.json({ url }); });
   } catch (err: any) {
     console.error("CHECKOUT_CREATE_SESSION_ERROR:", err);
     res.status(500).json({ error: err.message });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { TrackControls } from "@/components/TrackControls";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
@@ -328,6 +329,7 @@ function LibrarySection() {
                   <button style={{ background: `rgba(6,182,212,0.1)`, border: `1px solid rgba(6,182,212,0.3)`, color: C.cyan, borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>License</button>
                 </div>
               </div>
+              <TrackControls track={t} onRemoved={() => { if (previewId === t.id) setPreviewId(null); }} />
               {previewId === t.id && <audio controls autoPlay preload="none" src={`/api/tracks/${t.id}/preview`} onError={() => setPreviewError(t.id)} style={{ width: "100%", marginTop: 12 }} />}
               {previewError === t.id && <p role="alert" style={{ color: C.red, fontSize: "0.75rem", marginTop: 8 }}>Could not play this audio. Check the upload and try again.</p>}
               {!t.audioReady && <label style={{ display: "inline-block", marginTop: 12, padding: "0.4rem 0.7rem", border: `1px solid ${C.borderHover}`, borderRadius: 8, color: C.cyan, fontSize: "0.75rem", cursor: attachingId === null ? "pointer" : "wait" }}>

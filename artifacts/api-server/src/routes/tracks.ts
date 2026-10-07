@@ -4,6 +4,7 @@ import { requireAdmin } from "../middlewares/authMiddleware";
 import { db } from "@workspace/db";
 import { tracks } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -66,7 +67,7 @@ router.post("/tracks", requireAdmin, async (req, res) => {
   }
 });
 
-router.get("/tracks", async (_req, res) => {
+router.get("/tracks", requireAdmin, async (_req, res) => {
   try {
     const data = await getAllTracks();
     res.json(data);
@@ -83,6 +84,75 @@ router.get("/tracks/top-selling", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch top tracks" });
   }
+});
+
+
+// Track administration. The same advisory lock serializes checkout creation,
+// archive and deletion for a track, including across API instances.
+router.patch("/tracks/:id", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const { title, artist, genre, duration, priceCents } = req.body ?? {};
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 ||
+      typeof title !== "string" || !title.trim() || title.length > 255 ||
+      typeof artist !== "string" || !artist.trim() || artist.length > 255 ||
+      typeof genre !== "string" || genre.length > 100 ||
+      typeof duration !== "string" || duration.length > 20 ||
+      !Number.isSafeInteger(priceCents) || priceCents < 0 || priceCents > 2147483647) {
+    res.status(400).json({ error: "Enter valid track details and price." }); return;
+  }
+  try {
+    const [row] = await db.update(tracks).set({ title: title.trim(), artist: artist.trim(),
+      genre: genre.trim(), duration: duration.trim(), priceCents }).where(and(eq(tracks.id, id), isNull(tracks.deletedAt))).returning();
+    if (!row) { res.status(404).json({ error: "Track not found." }); return; }
+    const { fileUrl, ...track } = row;
+    res.json({ ...track, audioReady: Boolean(fileUrl) });
+  } catch { res.status(500).json({ error: "Could not update track." }); }
+});
+
+router.post("/tracks/:id/archive", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const archived = req.body?.archived;
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || typeof archived !== "boolean") {
+    res.status(400).json({ error: "Valid track ID and archive status required." }); return;
+  }
+  try {
+    const row = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(8147, ${id})`);
+      const [track] = await tx.update(tracks).set({ archivedAt: archived ? new Date() : null })
+        .where(and(eq(tracks.id, id), isNull(tracks.deletedAt))).returning();
+      return track;
+    });
+    if (!row) { res.status(404).json({ error: "Track not found." }); return; }
+    const { fileUrl, ...track } = row;
+    res.json({ ...track, audioReady: Boolean(fileUrl) });
+  } catch { res.status(500).json({ error: "Could not change archive status." }); }
+});
+
+router.delete("/tracks/:id", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || req.body?.confirm !== "DELETE") {
+    res.status(400).json({ error: "Valid track ID and DELETE confirmation required." }); return;
+  }
+  try {
+    const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(8147, ${id})`);
+      const [track] = await tx.select().from(tracks).where(eq(tracks.id, id));
+      if (!track || track.deletedAt) return { status: 404, error: "Track not found." };
+      if (!track.archivedAt) return { status: 409, error: "Archive this track before deleting it." };
+      const history = await tx.execute<{ used: boolean }>(sql`
+        SELECT (EXISTS (SELECT 1 FROM orders WHERE track_id = ${id})
+          OR EXISTS (SELECT 1 FROM licenses WHERE track_id = ${id})
+          OR EXISTS (SELECT 1 FROM transactions WHERE track_id = ${id})) AS used
+      `);
+      if (history.rows[0]?.used !== false) return { status: 409,
+        error: "This track has order or license history. Keep it archived to preserve customer downloads." };
+      await tx.update(tracks).set({ deletedAt: new Date() }).where(eq(tracks.id, id));
+      // Retain the row and audio for already issued checkouts and shared references.
+      return { status: 200, error: "" };
+    });
+    if (result.error) { res.status(result.status).json({ error: result.error }); return; }
+    res.json({ id, deleted: true });
+  } catch { res.status(500).json({ error: "Could not delete track." }); }
 });
 
 export default router;

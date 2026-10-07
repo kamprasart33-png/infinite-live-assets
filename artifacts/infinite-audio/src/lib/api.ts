@@ -18,6 +18,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function trackWrite<T>(path: string, method: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { method, credentials: "same-origin",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error ?? `Track update failed: ${res.status}`);
+  if (!data) throw new Error("The server returned an invalid response.");
+  return data as T;
+}
+
 async function uploadAudio(file: File): Promise<string> {
   const type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
   const { url, key } = await post<{ url: string; key: string }>("/tracks/upload-ticket", { name: file.name, size: file.size, type });
@@ -49,6 +58,10 @@ export interface DailySale {
   sales: number;
 }
 
+export interface TrackDetails {
+  title: string; artist: string; genre: string; duration: string; priceCents: number;
+}
+
 export interface Track {
   id: number;
   title: string;
@@ -58,6 +71,7 @@ export interface Track {
   priceCents: number;
   plays: number;
   audioReady: boolean;
+  archivedAt: string | null;
   createdAt: string;
 }
 
@@ -157,6 +171,9 @@ export const api = {
     dailySales: () => get<DailySale[]>("/metrics/daily-sales"),
   },
   tracks: {
+    update: (id: number, details: TrackDetails) => trackWrite<Track>(`/tracks/${id}`, "PATCH", details),
+    archive: (id: number, archived: boolean) => trackWrite<Track>(`/tracks/${id}/archive`, "POST", { archived }),
+    remove: (id: number) => trackWrite<{ deleted: boolean }>(`/tracks/${id}`, "DELETE", { confirm: "DELETE" }),
     all: () => get<Track[]>("/tracks"),
     topSelling: (limit = 10) => get<TopTrack[]>(`/tracks/top-selling?limit=${limit}`),
     add: async (file: File, details: { title: string; artist: string; genre: string; duration: string; priceCents: number }) => {

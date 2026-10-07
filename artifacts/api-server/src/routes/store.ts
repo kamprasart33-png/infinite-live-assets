@@ -13,14 +13,14 @@ const router: IRouter = Router();
 // GET /api/store/tracks — public track listing
 router.get("/store/tracks", async (_req, res) => {
   try {
-    const rows = await db.select().from(tracks);
+    const rows = await db.select().from(tracks).where(isNull(tracks.archivedAt));
     res.json(rows.filter((track) => Boolean(track.fileUrl)).map(({ fileUrl, ...track }) => ({ ...track, audioReady: true })));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Public full-song playback for tracks with uploaded audio.
+// Public full-song playback for active tracks with uploaded audio.
 router.get("/store/tracks/:id/stream", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isSafeInteger(id) || id < 1) {
@@ -28,7 +28,8 @@ router.get("/store/tracks/:id/stream", async (req, res) => {
     return;
   }
   try {
-    const [track] = await db.select({ fileUrl: tracks.fileUrl }).from(tracks).where(eq(tracks.id, id));
+    const [track] = await db.select({ fileUrl: tracks.fileUrl }).from(tracks)
+      .where(and(eq(tracks.id, id), isNull(tracks.archivedAt)));
     if (!track?.fileUrl) {
       res.status(404).json({ error: "Audio file not available" });
       return;
